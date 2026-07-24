@@ -71,17 +71,23 @@
   }
   button.primary{
     background:var(--accent); border:none; color:#04211f;
-    padding:9px 16px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer;
+    padding:9px 16px; border-radius:6px; font-weight:700; font-size:13px; cursor:pointer;
   }
   button.secondary{
-    background:transparent; border:1px solid var(--line); color:var(--text);
-    padding:9px 16px; border-radius:6px; font-size:13px; cursor:pointer;
+    background:rgba(13,191,31,0.12); border:1px solid rgba(13,191,31,0.4); color:var(--accent);
+    padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600;
+    transition: background 0.15s;
   }
-  button.secondary:disabled{
-    opacity:0.35; cursor:not-allowed;
-  }
+  button.secondary:hover{ background:rgba(13,191,31,0.22); }
+  button.secondary:disabled{ opacity:0.3; cursor:not-allowed; }
 
-  /* --- ACUIDADE --- */
+  .fs-btn{
+    background:rgba(13,191,31,0.12); border:1px solid rgba(13,191,31,0.4); color:var(--accent);
+    padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600;
+    display:inline-flex; align-items:center; gap:6px;
+    transition: background 0.15s;
+  }
+  .fs-btn:hover{ background:rgba(13,191,31,0.22); }
   #acuidade-canvas-wrap{
     position:relative;
     background:#fff;
@@ -108,26 +114,36 @@
   :fullscreen{background:#000;}
   .fs-overlay{
     position:fixed;
-    bottom:18px; left:50%; transform:translateX(-50%);
+    bottom:20px; left:50%; transform:translateX(-50%);
     display:none;
-    gap:10px; align-items:center;
-    background:rgba(20,20,23,0.9);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:10px 14px;
+    flex-wrap:wrap;
+    gap:8px; align-items:center;
+    background:rgba(10,10,18,0.88);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:12px;
+    padding:12px 18px;
     z-index:9999;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    max-width:92vw;
   }
   :fullscreen .fs-overlay{display:flex;}
   :fullscreen .fs-overlay.overlay-hidden{display:none !important;}
   .fs-overlay button{
-    background:var(--accent); border:none; color:#04211f;
-    padding:8px 14px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer;
+    background:rgba(13,191,31,0.15); border:1px solid rgba(13,191,31,0.5); color:#0dbf1f;
+    padding:7px 14px; border-radius:7px; font-weight:700; font-size:13px; cursor:pointer;
+    transition: background 0.15s;
   }
+  .fs-overlay button:active{ opacity:0.75; }
   .fs-overlay button.fs-exit{
-    background:transparent; border:1px solid #555; color:#eee;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#eee;
   }
-  .fs-overlay span{font-size:12px; color:#ccc; min-width:140px; text-align:center;}
+  .fs-overlay span{font-size:12px; color:#aaa; min-width:120px; text-align:center;}
+  .fs-overlay select{
+    background:#1e1e26; color:#eee; border:1px solid rgba(255,255,255,0.18);
+    border-radius:7px; padding:5px 8px; font-size:13px;
+  }
   :fullscreen #acuidade-canvas-wrap,
   :fullscreen #etdrs-canvas-wrap,
   :fullscreen #vect-canvas-wrap{
@@ -135,6 +151,13 @@
   }
   :fullscreen canvas{
     max-width:96vw; max-height:88vh; width:auto; height:auto;
+  }
+  /* Exceção: canvas do treino visual deve preencher 100% do wrapper */
+  #trainer-wrapper:fullscreen #trainer-canvas,
+  #trainer-wrapper:-webkit-full-screen #trainer-canvas,
+  :fullscreen #trainer-canvas {
+    max-width:100% !important; max-height:100% !important;
+    width:100% !important; height:100% !important;
   }
   /* Modo Side by Side precisa ocupar a tela INTEIRA sem margens em fullscreen,
      senão a TV expande cada metade com base em bordas erradas e a imagem sai descentralizada. */
@@ -267,7 +290,7 @@ function doLogin(){
   const ok = USERS.some(c => c.user === u && c.pass === p);
   if(ok){
     document.getElementById('login-screen').style.display = 'none';
-    sessionStorage.setItem('optoview_auth', '1');
+    localStorage.setItem('optoview_auth', '1');
   } else {
     const err = document.getElementById('login-error');
     err.textContent = 'Usuário ou senha incorretos.';
@@ -277,8 +300,8 @@ function doLogin(){
   }
 }
 
-// Se já autenticado nesta sessão, pula o login
-if(sessionStorage.getItem('optoview_auth') === '1'){
+// Se já autenticado neste dispositivo, pula o login permanentemente
+if(localStorage.getItem('optoview_auth') === '1'){
   document.getElementById('login-screen').style.display = 'none';
 }
 </script>
@@ -288,38 +311,51 @@ if(sessionStorage.getItem('optoview_auth') === '1'){
   <div class="tabs">
     <button class="tab-btn active" data-tab="etdrs">ETDRS Dissociada</button>
     <button class="tab-btn" data-tab="vectogram">Vetograma de Corda</button>
+    <button class="tab-btn" data-tab="trainer">Treino Visual</button>
   </div>
 </div>
 
 <div class="stage">
-  <!-- ================= ETDRS DISSOCIADA (unificada: vertical ou horizontal) ================= -->
+  <!-- ================= ETDRS DISSOCIADA ================= -->
   <div id="tab-etdrs" class="panel">
-    <div class="controls">
-      <label>Diagonal da tela (polegadas)
-        <input type="number" id="cal-diag" value="42" min="10" max="120" step="0.1" style="width:80px;">
+
+    <!-- Linha 1: calibração + controles principais -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0 6px;border-bottom:1px solid #2a2a30;margin-bottom:6px;">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Diagonal
+        <input type="number" id="cal-diag" value="42" min="10" max="120" step="0.1"
+          style="width:52px;background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 6px;font-size:13px;">
+        <span style="font-size:11px;color:#666;">"</span>
       </label>
-      <label>Resolução horizontal (px)
-        <input type="number" id="cal-reswidth" value="1920" min="640" max="7680" step="1" style="width:90px;">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Resolução
+        <input type="number" id="cal-reswidth" value="1920" min="640" max="7680" step="1"
+          style="width:64px;background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 6px;font-size:13px;">
+        <span style="font-size:11px;color:#666;">px</span>
       </label>
-      <label>Distância de teste (m)
-        <input type="number" id="cal-dist" value="3" min="0.5" max="10" step="0.1" style="width:70px;">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Distância
+        <input type="number" id="cal-dist" value="3" min="0.5" max="10" step="0.1"
+          style="width:46px;background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 6px;font-size:13px;">
+        <span style="font-size:11px;color:#666;">m</span>
       </label>
-    </div>
-    <div class="controls">
-      <label>Orientação da âncora
-        <select id="etdrs-orientation">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Orientação
+        <select id="etdrs-orientation" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="vertical">Vertical (colunas: esquerda / âncora / direita)</option>
           <option value="horizontal">Horizontal (linhas: topo / âncora / base)</option>
         </select>
       </label>
-      <label id="etdrs-layout-label">Layout de tamanhos
-        <select id="etdrs-layout">
+
+      <label id="etdrs-layout-label" style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Layout
+        <select id="etdrs-layout" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="single">Tamanho único (1 tamanho por tela, navega com ◀▶)</option>
           <option value="series">Decrescente (3 tamanhos por tela)</option>
         </select>
       </label>
-      <label id="etdrs-single-row-label" style="display:none;">Tamanho
-        <select id="etdrs-single-row">
+
+      <label id="etdrs-single-row-label" style="display:none;align-items:center;gap:5px;font-size:12px;color:#aaa;">Tamanho
+        <select id="etdrs-single-row" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="0">20/200</option>
           <option value="1">20/160</option>
           <option value="2">20/125</option>
@@ -333,8 +369,9 @@ if(sessionStorage.getItem('optoview_auth') === '1'){
           <option value="10">20/20</option>
         </select>
       </label>
-      <label>Tipo de conteúdo
-        <select id="etdrs-content-type">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Tipo de conteúdo
+        <select id="etdrs-content-type" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="letters">Letras ETDRS (C D H K N O R S V Z)</option>
           <option value="colored">Letras coloridas</option>
           <option value="numbers">Números — preto (1 2 3 4 5 6 7 8 9 0)</option>
@@ -344,8 +381,9 @@ if(sessionStorage.getItem('optoview_auth') === '1'){
           <option value="vergence">Teste de Vergência / Foria (objeto móvel)</option>
         </select>
       </label>
-      <label>Fonte
-        <select id="etdrs-font">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Fonte
+        <select id="etdrs-font" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="Arial, Helvetica, sans-serif">Arial (ETDRS padrão — sem serifa, letras abertas)</option>
           <option value="'Times New Roman', Times, serif">Times New Roman (serifa clássica — traços finos e grossos)</option>
           <option value="'Courier New', Courier, monospace">Courier New (monoespaçada — letras de mesma largura)</option>
@@ -354,30 +392,33 @@ if(sessionStorage.getItem('optoview_auth') === '1'){
           <option value="Georgia, serif">Georgia (serifa ampla — muito legível em telas)</option>
         </select>
       </label>
-      <label>Formato de exibição
-        <select id="etdrs-mode">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Formato
+        <select id="etdrs-mode" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="sbs">Side by Side (TV 3D passiva)</option>
           <option value="interlace">Entrelaçado linha a linha (monitor 3D passivo)</option>
           <option value="flat">Sem dissociação (referência, todas letras pretas)</option>
           <option value="channel">Calibração de canal (fundo verde/vermelho)</option>
         </select>
       </label>
-      <button class="primary" id="etdrs-redraw">Nova sequência de letras</button>
-      <button class="fs-btn" id="etdrs-fullscreen">⛶ Tela cheia</button>
+
+      <button id="etdrs-redraw" style="background:#0dbf1f;color:#04211f;font-weight:700;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;">▶ Nova sequência de letras</button>
+      <button class="fs-btn" id="etdrs-fullscreen" style="padding:7px 14px;font-size:13px;">⛶ Tela cheia</button>
     </div>
 
-    <div class="controls" id="etdrs-sbs-align-controls" style="display:none; justify-content:center; gap:16px; align-items:center;">
-      <span style="font-size:12px; color:var(--muted);">Ajuste fino (metade direita da tela / olho esquerdo):</span>
-      <span style="font-size:12px; color:var(--muted);">Vertical:</span>
+    <!-- Linha 2: ajuste SBS (aparece só no modo SBS) -->
+    <div id="etdrs-sbs-align-controls" style="display:none;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2a2a30;margin-bottom:6px;">
+      <span style="font-size:12px;color:#aaa;">Ajuste fino (olho esquerdo):</span>
+      <span style="font-size:12px;color:#666;">Vertical:</span>
       <button class="secondary" id="etdrs-sbs-up">▲</button>
-      <span id="etdrs-sbs-v-label" style="font-size:13px; min-width:46px; text-align:center;">0px</span>
+      <span id="etdrs-sbs-v-label" style="font-size:13px;min-width:40px;text-align:center;color:#eee;">0px</span>
       <button class="secondary" id="etdrs-sbs-down">▼</button>
-      <span style="font-size:12px; color:var(--muted); margin-left:10px;">Horizontal:</span>
+      <span style="font-size:12px;color:#666;margin-left:8px;">Horizontal:</span>
       <button class="secondary" id="etdrs-sbs-left">◀</button>
-      <span id="etdrs-sbs-h-label" style="font-size:13px; min-width:46px; text-align:center;">0px</span>
+      <span id="etdrs-sbs-h-label" style="font-size:13px;min-width:40px;text-align:center;color:#eee;">0px</span>
       <button class="secondary" id="etdrs-sbs-right">▶</button>
       <button class="secondary" id="etdrs-sbs-reset">Zerar tudo</button>
-      <span id="etdrs-sbs-saved-indicator" style="font-size:12px; color:var(--accent); min-width:70px;"></span>
+      <span id="etdrs-sbs-saved-indicator" style="font-size:12px;color:var(--accent);min-width:60px;"></span>
     </div>
 
     <div class="panel" id="vergence-panel" style="display:none; background:#0f0f12; margin-top:10px;">
@@ -484,39 +525,50 @@ if(sessionStorage.getItem('optoview_auth') === '1'){
 
   <!-- ================= VETOGRAMA DE CORDA (Bernell-style) ================= -->
   <div id="tab-vectogram" class="panel hidden">
-    <div class="controls">
-      <label>Formato de exibição
-        <select id="vect-mode">
+
+    <!-- Linha 1: controles principais -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0 6px;border-bottom:1px solid #2a2a30;margin-bottom:6px;">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Formato de exibição
+        <select id="vect-mode" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="sbs" selected>Side by Side (TV 3D passiva)</option>
           <option value="interlace">Entrelaçado linha a linha (monitor 3D passivo)</option>
           <option value="flat">Visualização plana (referência)</option>
         </select>
       </label>
-      <label>Tipo de vetograma
-        <select id="vect-type">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Tipo de vetograma
+        <select id="vect-type" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="spiral">Espiral circular (corda)</option>
           <option value="rect">Espiral retangular (Three Dimension Rx)</option>
           <option value="balloons">Bolas coloridas com letras/números</option>
+          <option value="grid">Grade / Tranaglyph</option>
+          <option value="rings">Círculos concêntricos</option>
+          <option value="stereopair">Par estéreo terapêutico</option>
         </select>
       </label>
-      <label>Disparidade base
-        <select id="vect-disparity">
+
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#aaa;">Disparidade base
+        <select id="vect-disparity" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
           <option value="6">Mínima (6px)</option>
           <option value="14" selected>Média (14px)</option>
           <option value="26">Ampla (26px)</option>
           <option value="42">Máxima (42px)</option>
         </select>
       </label>
-      <button class="fs-btn" id="vect-fullscreen">⛶ Tela cheia</button>
+
+      <button class="fs-btn" id="vect-fullscreen" style="padding:7px 14px;font-size:13px;">⛶ Tela cheia</button>
     </div>
-    <div class="controls" style="justify-content:center; gap:14px; align-items:center;">
-      <span style="font-size:12px; color:var(--muted);">Vergência horizontal:</span>
+
+    <!-- Linha 2: vergência -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2a2a30;margin-bottom:6px;">
+      <span style="font-size:12px;color:#aaa;">Vergência horizontal:</span>
       <button class="secondary" id="vect-h-neg">◀ Divergência</button>
-      <span id="vect-h-label" style="font-size:13px; min-width:50px; text-align:center;">-80px</span>
+      <span id="vect-h-label" style="font-size:13px;min-width:50px;text-align:center;color:#eee;">-80px</span>
       <button class="secondary" id="vect-h-pos">Convergência ▶</button>
-      <span style="font-size:12px; color:var(--muted); margin-left:12px;">Vertical:</span>
+      <span style="font-size:12px;color:#666;margin-left:8px;">Vertical:</span>
       <button class="secondary" id="vect-v-neg">▲ Hiperforia</button>
-      <span id="vect-v-label" style="font-size:13px; min-width:50px; text-align:center;">0px</span>
+      <span id="vect-v-label" style="font-size:13px;min-width:50px;text-align:center;color:#eee;">0px</span>
       <button class="secondary" id="vect-v-pos">Hipoforia ▼</button>
       <button class="secondary" id="vect-center">Centralizar</button>
     </div>
@@ -537,6 +589,131 @@ if(sessionStorage.getItem('optoview_auth') === '1'){
     </div>
   </div>
 
+  <!-- ─── ABA TREINO VISUAL (FoveaFlow-style) ─── -->
+  <div id="tab-trainer" class="panel hidden">
+
+    <!-- Barra de controles -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0 6px;border-bottom:1px solid #2a2a30;margin-bottom:8px;">
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0dbf1f" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+        <select id="tr-drill" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
+          <option value="pursuit">Smooth Pursuit</option>
+          <option value="jumps">Reaction Jumps</option>
+          <option value="multipleObjectTracking">Multiple Distractions</option>
+          <option value="lilac">Lilac Chaser</option>
+        </select>
+      </label>
+
+      <label id="tr-path-label" style="display:flex;align-items:center;gap:6px;font-size:13px;">Trajetória
+        <select id="tr-path" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
+          <option value="circle">Circular</option>
+          <option value="ellipse">Elipse</option>
+          <option value="figureEight">Figura 8</option>
+          <option value="lissajous">Lissajous</option>
+          <option value="wave">Onda</option>
+          <option value="hourglass">Ampulheta</option>
+          <option value="clover">Trevo</option>
+          <option value="bounce">Bounce</option>
+          <option value="diagonal">Diagonal</option>
+          <option value="horizontalSweep">Sweep H</option>
+          <option value="verticalSweep">Sweep V</option>
+          <option value="downRightSweep">Sweep ↘</option>
+          <option value="downLeftSweep">Sweep ↙</option>
+          <option value="perimeterLoop">Perímetro</option>
+          <option value="diamondLoop">Losango</option>
+          <option value="zigZag">Zigzag</option>
+          <option value="stairStep">Escada</option>
+          <option value="cornerTour">Cantos</option>
+          <option value="randomWalk">Passeio aleatório</option>
+          <option value="directionChange">Mudança de direção</option>
+        </select>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">Tamanho
+        <input id="tr-size" type="range" min="10" max="80" value="30" style="width:80px;accent-color:#0dbf1f;">
+        <span id="tr-size-val" style="min-width:24px;font-size:12px;color:#aaa;">30</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">Velocidade
+        <input id="tr-speed" type="range" min="1" max="30" value="8" style="width:80px;accent-color:#0dbf1f;">
+        <span id="tr-speed-val" style="min-width:28px;font-size:12px;color:#aaa;">8.0</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">Cor alvo
+        <input id="tr-color" type="color" value="#00e5ff" style="width:32px;height:24px;border:none;background:none;cursor:pointer;border-radius:4px;">
+      </label>
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">Rótulo
+        <select id="tr-label-mode" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
+          <option value="none">Nenhum</option>
+          <option value="letters">Letras aleatórias</option>
+          <option value="numbers">Números aleatórios</option>
+          <option value="fixed">Texto fixo</option>
+        </select>
+      </label>
+
+      <label id="tr-label-fixed-wrap" style="display:none;align-items:center;gap:6px;font-size:13px;">Texto
+        <input id="tr-label-fixed" type="text" maxlength="3" value="A"
+          style="width:40px;background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 6px;font-size:13px;text-align:center;">
+      </label>
+
+      <label id="tr-label-color-wrap" style="display:none;align-items:center;gap:6px;font-size:13px;">Cor rótulo
+        <input id="tr-label-color" type="color" value="#ffffff" style="width:32px;height:24px;border:none;background:none;cursor:pointer;border-radius:4px;">
+      </label>
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">Fundo
+        <select id="tr-bg" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
+          <option value="dark">Escuro</option>
+          <option value="light">Claro</option>
+        </select>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;">Modo
+        <select id="tr-bino" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
+          <option value="normal">Normal</option>
+          <option value="sbs-same">SBS — mesmo alvo</option>
+          <option value="sbs-diff">SBS — alvos separados</option>
+        </select>
+      </label>
+
+      <label id="tr-verg-label" style="display:none;align-items:center;gap:6px;font-size:13px;">Vergência
+        <input id="tr-verg" type="range" min="-80" max="80" value="0" style="width:80px;accent-color:#0dbf1f;">
+        <span id="tr-verg-val" style="min-width:32px;font-size:12px;color:#aaa;">0px</span>
+      </label>
+
+      <label id="tr-dist-label" style="display:none;align-items:center;gap:6px;font-size:13px;">Distratores
+        <select id="tr-distractors" style="background:#1e1e26;color:#eee;border:1px solid #333;border-radius:6px;padding:4px 8px;font-size:13px;">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="8">8</option>
+          <option value="12">12</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Botões -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <button id="tr-start" style="background:#0dbf1f;color:#04211f;font-weight:700;border:none;padding:7px 20px;border-radius:6px;cursor:pointer;font-size:13px;">▶ Iniciar</button>
+      <button id="tr-stop" disabled style="background:#2a2a30;color:#888;border:none;padding:7px 20px;border-radius:6px;cursor:pointer;font-size:13px;">■ Parar</button>
+      <button id="tr-fullscreen" style="background:#1e1e26;color:#aaa;border:1px solid #333;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;">⛶ Tela cheia</button>
+      <span id="tr-status" style="color:#666;font-size:12px;margin-left:4px;"></span>
+    </div>
+
+    <!-- Canvas -->
+    <div id="trainer-wrapper" style="position:relative;width:100%;background:#000;border-radius:8px;">
+      <canvas id="trainer-canvas" style="width:100%;aspect-ratio:16/9;display:block;border-radius:8px;"></canvas>
+    </div>
+
+    <div style="color:#555;font-size:11px;margin-top:6px;line-height:1.7;">
+      <b style="color:#777">2 toques</b> em tela cheia: mostra/esconde painel ·
+      <b style="color:#777">Smooth Pursuit</b> siga o alvo ·
+      <b style="color:#777">Reaction Jumps</b> fixe rapidamente ·
+      <b style="color:#777">Distractions</b> rastreie o alvo correto ·
+      <b style="color:#777">Lilac Chaser</b> fixe a cruz central
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -547,7 +724,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('tab-etdrs').classList.toggle('hidden', btn.dataset.tab!=='etdrs');
     document.getElementById('tab-vectogram').classList.toggle('hidden', btn.dataset.tab!=='vectogram');
+    document.getElementById('tab-trainer').classList.toggle('hidden', btn.dataset.tab!=='trainer');
     if(btn.dataset.tab === 'vectogram') renderVectogram();
+    if(btn.dataset.tab !== 'trainer') stopTrainer();
+    if(btn.dataset.tab === 'trainer') setTimeout(()=>{ if(!trRunning) startTrainer(); }, 150);
   });
 });
 
@@ -662,7 +842,7 @@ const etSbsHLabel = document.getElementById('etdrs-sbs-h-label');
 const etSbsSavedIndicator = document.getElementById('etdrs-sbs-saved-indicator');
 
 const EW = etCanvas.width, EH = etCanvas.height;
-const SLOAN = ['C','D','H','K','N','O','R','S','V','Z'];
+const SLOAN = ['C','D','H','K','N','O','R','S','V','Z','A','E','I','U','F','L','P','T'];
 const NUMBERS = ['1','2','3','4','5','6','7','8','9','0'];
 
 // Objetos infantis — estilo outline/preenchido preto, igual aos testes clínicos reais:
@@ -2395,6 +2575,9 @@ function resetVectLayouts(){
   vectSpiralLayout = null;
   vectRectLayout   = null;
   balloonLayout    = null;
+  gridLayout       = null;
+  ringsLayout      = null;
+  stereoLayout     = null;
 }
 function getBalloonLayout(){
   if(balloonLayout) return balloonLayout;
@@ -2475,6 +2658,280 @@ function drawBalloonsVectogram(ctx, eyeSign, globalDx, globalDy){
 }
 
 // ─── CANVAS POR OLHO ───
+// ─── VETOGRAMA DE GRADE (TRANAGLYPH) ───
+// Grade de linhas horizontais e verticais com marcadores nas interseções.
+// Cada interseção tem disparidade binocular própria — cria sensação de profundidade variada.
+let gridLayout = null;
+function getGridLayout(){
+  if(gridLayout) return gridLayout;
+  const cols = 7, rows = 5;
+  const disparities = uniqueRandomDisparities(cols*rows, -10, 38);
+  gridLayout = {cols, rows, disparities};
+  return gridLayout;
+}
+
+function drawGridVectogram(ctx, eyeSign, dx, dy){
+  const bg = ctx.createLinearGradient(0,0,0,VH);
+  bg.addColorStop(0,'#f9f9f9'); bg.addColorStop(1,'#f0f0f0');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,VW,VH);
+
+  const {cols, rows, disparities} = getGridLayout();
+  const cx=VW/2, cy=VH/2;
+  const gW=VW*0.72, gH=VH*0.72;
+  const x0=cx-gW/2, y0=cy-gH/2;
+  const stepX=gW/(cols-1), stepY=gH/(rows-1);
+  const lineColor='#3a6fa8', markerColor='#1a3f6a';
+  const lw=3;
+
+  // Linhas horizontais
+  ctx.save();
+  ctx.strokeStyle=lineColor; ctx.lineWidth=lw; ctx.globalAlpha=0.35;
+  for(let r=0;r<rows;r++){
+    const y=y0+r*stepY;
+    ctx.beginPath(); ctx.moveTo(x0+eyeSign*dx, y+eyeSign*dy);
+    ctx.lineTo(x0+gW+eyeSign*dx, y+eyeSign*dy); ctx.stroke();
+  }
+  // Linhas verticais
+  for(let c=0;c<cols;c++){
+    const x=x0+c*stepX;
+    ctx.beginPath(); ctx.moveTo(x+eyeSign*dx, y0+eyeSign*dy);
+    ctx.lineTo(x+eyeSign*dx, y0+gH+eyeSign*dy); ctx.stroke();
+  }
+  ctx.globalAlpha=1; ctx.restore();
+
+  // Marcadores nas interseções com disparidade individual
+  let idx=0;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const mDisp = disparities[idx++] || 0;
+      const mx = x0+c*stepX + eyeSign*(mDisp+dx);
+      const my = y0+r*stepY + eyeSign*dy;
+      const mr = 14+Math.round((r+c)*1.2);
+      const label = String.fromCharCode(65+(r*cols+c)%(26));
+      drawMarker(ctx, mx, my, label, mr, lineColor, markerColor);
+    }
+  }
+
+  // Cruz central de fixação
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx+eyeSign*dx, cy+eyeSign*dy, 20,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.strokeStyle=lineColor; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle=lineColor; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(cx-12+eyeSign*dx,cy+eyeSign*dy); ctx.lineTo(cx+12+eyeSign*dx,cy+eyeSign*dy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+eyeSign*dx,cy-12+eyeSign*dy); ctx.lineTo(cx+eyeSign*dx,cy+12+eyeSign*dy); ctx.stroke();
+  ctx.restore();
+}
+
+// ─── PAR ESTÉREO TERAPÊUTICO ───
+// Figura idêntica apresentada a cada olho com disparidade horizontal controlada por elemento.
+// Cada elemento da figura tem sua própria disparidade — cria planos de profundidade distintos.
+// Design: alvo de fusão clássico com anéis, cruz, e marcadores cardeais.
+// Contornos limpos, fundo neutro, sem volumetria — puro par estéreo.
+let stereoLayout = null;
+
+function getStereoLayout(){
+  if(stereoLayout) return stereoLayout;
+  // Cada elemento tem disparidade própria (em px no canvas, controlada e sutil)
+  stereoLayout = {
+    // Anéis: 4 anéis concêntricos, disparidades progressivas
+    ringDisp:   uniqueRandomDisparities(4, 2, 32),
+    // Cruz central: barra H e barra V com disparidades independentes
+    crossHDisp: Math.round(uniqueRandomDisparities(1, 4, 20)[0]),
+    crossVDisp: Math.round(uniqueRandomDisparities(1, 4, 20)[0]),
+    // Marcadores cardeais (N, S, E, O) e diagonais (NE, NO, SE, SO)
+    markerDisp: uniqueRandomDisparities(8, 0, 28),
+    // Quadrado externo de referência (sempre fixo — âncora de fusão)
+    squareDisp: 0,
+  };
+  return stereoLayout;
+}
+
+function drawStereoPair(ctx, eyeSign, dx, dy){
+  // Fundo branco neutro
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,VW,VH);
+
+  const {ringDisp, crossHDisp, crossVDisp, markerDisp, squareDisp} = getStereoLayout();
+  const cx = VW/2, cy = VH/2;
+  const baseR = Math.min(VW,VH) * 0.38; // raio do maior anel
+  const lineW = 2.5;
+  const mainColor = '#1a1a2e';    // quase-preto para contornos
+  const accentColor = '#3a6fa8';  // azul para marcadores
+  const dimColor = '#8899aa';     // cinza-azulado para elementos secundários
+
+  // ─ 1. QUADRADO EXTERNO DE REFERÊNCIA (âncora de fusão — disparidade zero) ─
+  // O quadrado é idêntico nos dois olhos — serve como moldura de fusão
+  const sqSize = baseR * 1.42;
+  const sqD = eyeSign * (squareDisp + dx);
+  const sqDy = eyeSign * dy;
+  ctx.save();
+  ctx.strokeStyle = dimColor;
+  ctx.lineWidth = lineW;
+  ctx.setLineDash([12, 8]);
+  ctx.strokeRect(cx - sqSize + sqD, cy - sqSize * 0.72 + sqDy, sqSize*2, sqSize*1.44);
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ─ 2. ANÉIS CONCÊNTRICOS ─
+  // 4 anéis, cada um com disparidade diferente — criam planos de profundidade
+  const ringRadii = [baseR, baseR*0.72, baseR*0.48, baseR*0.26];
+  const ringWidths = [2.8, 2.4, 2.0, 1.8];
+  ringRadii.forEach((r, i) => {
+    const d = eyeSign * (ringDisp[i] + dx);
+    const dvy = eyeSign * dy;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx + d, cy + dvy, r, 0, Math.PI*2);
+    ctx.strokeStyle = i === 0 ? mainColor : i === 1 ? accentColor : dimColor;
+    ctx.lineWidth = ringWidths[i];
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // ─ 3. CRUZ CENTRAL ─
+  // Barra H e V com disparidades independentes entre si
+  const armLen = baseR * 0.22;
+  const crossGap = baseR * 0.06; // espaço ao redor do centro
+
+  // Barra horizontal
+  const hd = eyeSign * (crossHDisp + dx);
+  ctx.save();
+  ctx.strokeStyle = mainColor; ctx.lineWidth = lineW + 0.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - armLen + hd, cy + eyeSign*dy);
+  ctx.lineTo(cx - crossGap + hd, cy + eyeSign*dy);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + crossGap + hd, cy + eyeSign*dy);
+  ctx.lineTo(cx + armLen + hd, cy + eyeSign*dy);
+  ctx.stroke();
+  ctx.restore();
+
+  // Barra vertical
+  const vd = eyeSign * (crossVDisp + dx);
+  ctx.save();
+  ctx.strokeStyle = mainColor; ctx.lineWidth = lineW + 0.5;
+  ctx.beginPath();
+  ctx.moveTo(cx + vd, cy - armLen + eyeSign*dy);
+  ctx.lineTo(cx + vd, cy - crossGap + eyeSign*dy);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + vd, cy + crossGap + eyeSign*dy);
+  ctx.lineTo(cx + vd, cy + armLen + eyeSign*dy);
+  ctx.stroke();
+  ctx.restore();
+
+  // ─ 4. PONTO CENTRAL DE FIXAÇÃO ─
+  const fd = eyeSign * dx;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx + fd, cy + eyeSign*dy, 5, 0, Math.PI*2);
+  ctx.fillStyle = mainColor; ctx.fill();
+  ctx.restore();
+
+  // ─ 5. MARCADORES CARDEAIS E DIAGONAIS ─
+  // 8 marcadores ao redor do anel médio (anel 1), cada um com disparidade própria
+  const mR = baseR * 0.72; // raio do anel médio
+  const mSize = 7; // tamanho do marcador (diamante)
+  const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4];
+
+  angles.forEach((angle, i) => {
+    const md = eyeSign * (markerDisp[i] + dx);
+    const mx = cx + Math.cos(angle) * mR + md;
+    const my = cy + Math.sin(angle) * mR + eyeSign * dy;
+
+    // Diamante (losango) — forma clínica clássica para marcadores de estereopsia
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(Math.PI/4);
+    const isSbsCardinal = i % 2 === 0; // cardeais vs diagonais
+    ctx.fillStyle = isSbsCardinal ? accentColor : dimColor;
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.rect(-mSize/2, -mSize/2, mSize, mSize);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+
+  // ─ 6. RÉGUA DE DISPARIDADE (canto inferior direito) ─
+  // Indicador visual da disparidade atual — orientação clínica
+  const dispPx = Math.abs(dx + (ringDisp[0]||0));
+  const rulerX = VW - 180, rulerY = VH - 60;
+  ctx.save();
+  ctx.fillStyle = '#aab';
+  ctx.font = '13px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Δ binocular: ${Math.round(dispPx)}px`, rulerX, rulerY);
+  ctx.restore();
+}
+
+// ─── VETOGRAMA DE CÍRCULOS CONCÊNTRICOS ───
+// Anéis em profundidades diferentes — do centro (mais perto) para fora (mais longe).
+// Marcadores distribuídos ao longo de cada anel com disparidade individual.
+let ringsLayout = null;
+function getRingsLayout(){
+  if(ringsLayout) return ringsLayout;
+  const nRings = 5;
+  const markersPerRing = 8;
+  const total = nRings * markersPerRing;
+  ringsLayout = {
+    nRings, markersPerRing,
+    ringDisparities: uniqueRandomDisparities(nRings, -8, 40),       // disparidade base por anel
+    markerDisparities: uniqueRandomDisparities(total, 0, 12)        // variação extra por marcador
+  };
+  return ringsLayout;
+}
+
+function drawRingsVectogram(ctx, eyeSign, dx, dy){
+  ctx.fillStyle='#f9f9f9'; ctx.fillRect(0,0,VW,VH);
+  const {nRings, markersPerRing, ringDisparities, markerDisparities} = getRingsLayout();
+  const cx=VW/2, cy=VH/2;
+  const maxR = Math.min(VW,VH)*0.42;
+  const lineColor='#3a6fa8';
+
+  for(let r=0;r<nRings;r++){
+    const radius = maxR*(r+1)/nRings;
+    const rDisp = ringDisparities[r] || 0;
+    const rdx = eyeSign*(rDisp+dx);
+    const rdy = eyeSign*dy;
+
+    // Anel
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx+rdx, cy+rdy, radius, 0, Math.PI*2);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 3.5 - r*0.4;
+    ctx.globalAlpha = 0.45 + r*0.08;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Marcadores distribuídos ao longo do anel
+    for(let m=0;m<markersPerRing;m++){
+      const angle = (Math.PI*2/markersPerRing)*m - Math.PI/2;
+      const mDisp = markerDisparities[r*markersPerRing+m] || 0;
+      const totalDisp = rDisp + mDisp;
+      const mx = cx + Math.cos(angle)*radius + eyeSign*(totalDisp+dx);
+      const my = cy + Math.sin(angle)*radius + eyeSign*dy;
+      const mr = 13 + Math.round(r*2.5);
+      const label = String.fromCharCode(65+(r*markersPerRing+m)%26);
+      drawMarker(ctx, mx, my, label, mr, lineColor, '#1a3f6a');
+    }
+  }
+
+  // Cruz central de fixação
+  const fdx=eyeSign*dx, fdy=eyeSign*dy;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx+fdx, cy+fdy, 20,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.strokeStyle=lineColor; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle=lineColor; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(cx-12+fdx,cy+fdy); ctx.lineTo(cx+12+fdx,cy+fdy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+fdx,cy-12+fdy); ctx.lineTo(cx+fdx,cy+12+fdy); ctx.stroke();
+  ctx.restore();
+}
+
 // ─── CANVAS POR OLHO (Vetograma) ───
 function buildVectEyeCanvas(eyeSign){
   const c=document.createElement('canvas');
@@ -2498,6 +2955,12 @@ function buildVectEyeCanvas(eyeSign){
     drawRectVectogram(ctx,dx,dy,eyeSign);
   } else if(vectTypeSel.value==='balloons'){
     drawBalloonsVectogram(ctx, eyeSign, dx, dy);
+  } else if(vectTypeSel.value==='grid'){
+    drawGridVectogram(ctx, eyeSign, dx, dy);
+  } else if(vectTypeSel.value==='rings'){
+    drawRingsVectogram(ctx, eyeSign, dx, dy);
+  } else if(vectTypeSel.value==='stereopair'){
+    drawStereoPair(ctx, eyeSign, dx, dy);
   } else {
     drawSpiralVectogram(ctx,dx,dy,eyeSign);
   }
@@ -2720,6 +3183,776 @@ document.addEventListener('touchend', (e)=>{
     }, 350); // 350ms de janela para acumular toques antes de decidir a ação
   }
 });
+// ═══════════════════════════════════════════════════════════════
+// ─── TREINO VISUAL — Engine fiel ao FoveaFlow ───
+// Implementação em JS puro baseada no código-fonte original (MIT)
+// Padrões: circle, ellipse, figureEight, wave, diagonal, bounce,
+//          randomWalk, directionChange, teleport, horizontalSweep,
+//          verticalSweep, downRightSweep, downLeftSweep, perimeterLoop,
+//          diamondLoop, clover, zigZag, stairStep, lissajous,
+//          hourglass, cornerTour, multipleObjectTracking
+// Modos: Normal | SBS mesmo alvo | SBS alvos separados (vergência)
+// ═══════════════════════════════════════════════════════════════
+{
+// ── RNG determinístico (idêntico ao FoveaFlow) ──────────────────
+const normalizeSeed = s => { const n = Math.trunc(Math.abs(s)) % 2147483647; return n === 0 ? 1 : n; };
+const seededRandom = (seed, index) => {
+  let v = normalizeSeed(seed + index * 374761393);
+  v = Math.imul(v ^ (v >>> 13), 1274126177);
+  v = (v ^ (v >>> 16)) >>> 0;
+  return v / 4294967296;
+};
+const createRng = seed => {
+  const s = normalizeSeed(seed);
+  const randomAt = i => seededRandom(s, i);
+  return { seed: s, randomAt, rangeAt: (i, mn, mx) => mn + (mx - mn) * randomAt(i) };
+};
+
+// ── Utilitários de curva ────────────────────────────────────────
+const TAU = Math.PI * 2;
+const clamp = (v, mn, mx) => Math.min(mx, Math.max(mn, v));
+const pingPong = (v, len) => { if(len<=0) return 0; const w = ((v % (len*2)) + (len*2)) % (len*2); return w <= len ? w : len*2 - w; };
+const positiveModulo = (v, d) => ((v % d) + d) % d;
+
+const buildClosedCurve = (samples, pointAt) => {
+  const pts = []; const lens = []; let total = 0;
+  for(let i=0;i<=samples;i++) pts.push(pointAt(i/samples));
+  for(let i=0;i<samples;i++){
+    const l = Math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]);
+    lens.push(l); total += l;
+  }
+  return { pts, lens, total };
+};
+const buildClosedPolyline = (n, pointAt) => {
+  const pts = []; const lens = []; let total = 0;
+  for(let i=0;i<n;i++) pts.push(pointAt(i));
+  if(!pts.length){ pts.push([0,0]); return { pts, lens, total }; }
+  pts.push(pts[0]);
+  for(let i=0;i<n;i++){
+    const l = Math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]);
+    lens.push(l); total += l;
+  }
+  return { pts, lens, total };
+};
+const sampleCurvePath = (curve, travelPx) => {
+  if(curve.total <= 0) return curve.pts[0];
+  let rem = positiveModulo(travelPx, curve.total);
+  for(let i=0;i<curve.lens.length;i++){
+    const l = curve.lens[i];
+    if(rem <= l){
+      const p = curve.pts[i], q = curve.pts[i+1], t = l<=0?0:rem/l;
+      return [p[0]+(q[0]-p[0])*t, p[1]+(q[1]-p[1])*t];
+    }
+    rem -= l;
+  }
+  return curve.pts[0];
+};
+
+// ── PatternBounds ───────────────────────────────────────────────
+const resolvePatternBounds = (W, H, radiusPx, pathMarginPx=16) => {
+  const req = Math.max(pathMarginPx, radiusPx+8);
+  const maxM = Math.max(0, Math.min(W,H)/2);
+  const m = Math.min(req, maxM);
+  const l=m, t=m, r=Math.max(l,W-m), b=Math.max(t,H-m);
+  return { left:l, top:t, right:r, bottom:b,
+           width:Math.max(0,r-l), height:Math.max(0,b-t),
+           cx:W/2, cy:H/2, rx:(r-l)/2, ry:(b-t)/2 };
+};
+
+// ── RandomWalk (fiel ao original) ───────────────────────────────
+const RWSTEP = 5;
+const createRWState = (rng, travelPx, l, t, r, b) => {
+  const h = rng.rangeAt(90001, 0, TAU);
+  return { seed:rng.seed, x:rng.rangeAt(90002,l,r), y:rng.rangeAt(90003,t,b),
+           heading:h, targetHeading:h, turnIndex:0,
+           nextTurnTravel: travelPx+rng.rangeAt(90004,150,340),
+           committedTravelPx:travelPx, lastSampleTravelPx:travelPx };
+};
+const shortestAngle = (from, to) => Math.atan2(Math.sin(to-from), Math.cos(to-from));
+const confineRW = (s, l, t, r, b) => {
+  let rx=false, ry=false;
+  while(s.x<l||s.x>r){ s.x=s.x<l?l+(l-s.x):r-(s.x-r); rx=!rx; }
+  while(s.y<t||s.y>b){ s.y=s.y<t?t+(t-s.y):b-(s.y-b); ry=!ry; }
+  if(rx){ s.heading=Math.PI-s.heading; s.targetHeading=s.heading; }
+  if(ry){ s.heading=-s.heading; s.targetHeading=s.heading; }
+};
+const integrateRWStep = (s, rng, sampledPx, stepPx, l, t, r, b) => {
+  if(sampledPx >= s.nextTurnTravel){
+    s.turnIndex++;
+    const w = Math.sin((sampledPx+rng.seed*0.17)/180)*0.28 + Math.sin((sampledPx+rng.seed*0.31)/310)*0.18;
+    const rh = s.heading + w + rng.rangeAt(91000+s.turnIndex, -1.85, 1.85);
+    const cx2=(l+r)/2, cy2=(t+b)/2;
+    const ox=(s.x-cx2)/Math.max(1,(r-l)/2), oy=(s.y-cy2)/Math.max(1,(b-t)/2);
+    const bias = clamp((Math.hypot(ox,oy)-0.35)/0.65,0,1)*0.75;
+    const ch = Math.atan2(cy2-s.y, cx2-s.x);
+    s.targetHeading = rh + shortestAngle(rh,ch)*bias;
+    s.nextTurnTravel = sampledPx + rng.rangeAt(92000+s.turnIndex,160,360);
+  }
+  const drift = Math.sin((sampledPx+rng.seed*0.41)/220)*0.0018 + Math.sin((sampledPx+rng.seed*0.73)/380)*0.0012;
+  s.heading += shortestAngle(s.heading,s.targetHeading)*Math.min(1,stepPx/150) + drift*stepPx;
+  s.x += Math.cos(s.heading)*stepPx; s.y += Math.sin(s.heading)*stepPx;
+  confineRW(s, l, t, r, b);
+};
+const advanceRW = (state, preview, rng, travelPx, l, t, r, b) => {
+  confineRW(state, l, t, r, b);
+  if(!isFinite(travelPx) || travelPx <= state.committedTravelPx){
+    state.lastSampleTravelPx = travelPx; return state;
+  }
+  while(state.committedTravelPx + RWSTEP <= travelPx){
+    const nx = state.committedTravelPx + RWSTEP;
+    integrateRWStep(state, rng, nx, RWSTEP, l, t, r, b);
+    state.committedTravelPx = nx;
+  }
+  const rem = travelPx - state.committedTravelPx;
+  if(rem <= 0){ state.lastSampleTravelPx = travelPx; return state; }
+  Object.assign(preview, state);
+  integrateRWStep(preview, rng, travelPx, rem, l, t, r, b);
+  state.lastSampleTravelPx = travelPx; return preview;
+};
+
+// ── HardTurn (directionChange) ──────────────────────────────────
+const HT_OFFSET=40000, HT_STRIDE=60, HT_CANDS=24, HT_MIN_DIST=0.55;
+const createHTWaypoint = (rng, idx, px, py, l, t, r, b) => {
+  const W2=r-l, H2=b-t, minD=Math.min(W2,H2)*HT_MIN_DIST;
+  let bx=px, by=py, bd=-1;
+  for(let c=0;c<HT_CANDS;c++){
+    const ri=HT_OFFSET+idx*HT_STRIDE+c*2;
+    const cx2=rng.rangeAt(ri,l,r), cy2=rng.rangeAt(ri+1,t,b);
+    const d=Math.hypot(cx2-px,cy2-py);
+    if(d>=minD) return [cx2,cy2];
+    if(d>bd){ bx=cx2; by=cy2; bd=d; }
+  }
+  return [bx, by];
+};
+const sampleHardTurn = (htState, rng, travelPx, l, t, r, b) => {
+  const dist = isFinite(travelPx)?Math.max(0,travelPx):0;
+  let s = htState.ht;
+  if(!s||s.seed!==rng.seed||dist<s.lastTravelPx){
+    const x=rng.rangeAt(HT_OFFSET,l,r), y=rng.rangeAt(HT_OFFSET+1,t,b);
+    const [tx,ty]=createHTWaypoint(rng,1,x,y,l,t,r,b);
+    s={seed:rng.seed,l,t,r,b,x,y,targetX:tx,targetY:ty,wpIdx:2,lastTravelPx:dist};
+    htState.ht=s;
+  }
+  let rem = dist - s.lastTravelPx;
+  while(rem>0){
+    const dx=s.targetX-s.x, dy=s.targetY-s.y, seg=Math.hypot(dx,dy);
+    if(seg<=1e-9){ const [nx,ny]=createHTWaypoint(rng,s.wpIdx++,s.x,s.y,l,t,r,b); s.targetX=nx; s.targetY=ny; continue; }
+    const step=Math.min(rem,seg);
+    s.x=clamp(s.x+dx/seg*step,l,r); s.y=clamp(s.y+dy/seg*step,t,b); rem-=step;
+    if(step>=seg-1e-9){ const [nx,ny]=createHTWaypoint(rng,s.wpIdx++,s.x,s.y,l,t,r,b); s.targetX=nx; s.targetY=ny; }
+  }
+  s.lastTravelPx=dist; return [s.x, s.y];
+};
+
+// ── Sampler principal ───────────────────────────────────────────
+const samplePattern = (id, travelPx, W, H, radiusPx, speedPxSec, rng, st, colorA, colorB, targetCount, distractorCount) => {
+  const {left:l,top:t,right:r,bottom:b,cx,cy,rx,ry,width:W2,height:H2} = resolvePatternBounds(W,H,radiusPx);
+  const frames = [];
+
+  const addTarget = (x,y,color,alpha,role) => frames.push({x,y,radiusPx,color:color||colorA,alpha:alpha??1,visible:true,role:role||'target'});
+
+  if(id==='circle'){
+    const rad=Math.min(rx,ry), angle=travelPx/Math.max(1,rad);
+    addTarget(cx+Math.cos(angle)*rad, cy+Math.sin(angle)*rad);
+  }
+  else if(id==='ellipse'){
+    if(!st.cc||st.cc.id!==`${id}:${l}:${t}:${r}:${b}`) st.cc={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(160,p=>[cx+Math.cos(p*TAU)*rx, cy+Math.sin(p*TAU)*ry])};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='figureEight'){
+    if(!st.cc||st.cc.id!==`${id}:${l}:${t}:${r}:${b}`) st.cc={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(180,p=>{const a=p*TAU;return [cx+Math.sin(a)*rx, cy+Math.sin(a*2)*ry*0.72];})};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='wave'){
+    if(!st.cc||st.cc.id!==`${id}:${l}:${t}:${r}:${b}`) st.cc={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(120,p=>{const a=p*TAU;return [cx+Math.cos(a)*rx, cy+Math.sin(a*3)*ry*0.42];})};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='lissajous'){
+    if(!st.cc||st.cc.id!==`${id}:${l}:${t}:${r}:${b}`) st.cc={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(180,p=>{const a=p*TAU;return [cx+Math.sin(a*3+Math.PI/2)*rx, cy+Math.sin(a*2)*ry];})};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='hourglass'){
+    if(!st.cc||st.cc.id!==`${id}:${l}:${t}:${r}:${b}`) st.cc={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(160,p=>{const a=p*TAU,v=Math.sin(a),pin=0.22+0.74*Math.abs(v);return [cx+Math.sin(a*2)*rx*pin, cy+v*ry];})};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='clover'){
+    if(!st.cc||st.cc.id!==`${id}:${l}:${t}:${r}:${b}`) st.cc={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(160,p=>{const a=p*TAU,pet=0.58+0.3*Math.cos(a*4);return [cx+Math.cos(a)*rx*pet, cy+Math.sin(a)*ry*pet];})};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='diagonal'){
+    const xs=0.72,ys=1,sc=1/Math.hypot(xs,ys);
+    addTarget(l+pingPong(travelPx*xs*sc,W2), t+pingPong(travelPx*ys*sc,H2));
+  }
+  else if(id==='bounce'){
+    const xs=0.93,ys=0.67,sc=1/Math.hypot(xs,ys);
+    addTarget(l+pingPong(travelPx*xs*sc+W2*0.18,W2), t+pingPong(travelPx*ys*sc+H2*0.41,H2));
+  }
+  else if(id==='horizontalSweep'){
+    addTarget(l+pingPong(travelPx,W2), cy);
+  }
+  else if(id==='verticalSweep'){
+    addTarget(cx, t+pingPong(travelPx,H2));
+  }
+  else if(id==='downRightSweep'){
+    const dlen=Math.max(1,Math.hypot(W2,H2)), prog=pingPong(travelPx,dlen)/dlen;
+    addTarget(l+W2*prog, t+H2*prog);
+  }
+  else if(id==='downLeftSweep'){
+    const dlen=Math.max(1,Math.hypot(W2,H2)), prog=pingPong(travelPx,dlen)/dlen;
+    addTarget(r-W2*prog, t+H2*prog);
+  }
+  else if(id==='perimeterLoop'){
+    if(!st.pl||st.pl.id!==`${id}:${l}:${t}:${r}:${b}`) st.pl={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedPolyline(4,i=>[l,t,r,r,l][i]!==undefined?[[l,t],[r,t],[r,b],[l,b]][i]:[l,t])};
+    const [x,y]=sampleCurvePath(st.pl.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='diamondLoop'){
+    if(!st.pl||st.pl.id!==`${id}:${l}:${t}:${r}:${b}`) st.pl={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedPolyline(4,i=>[[cx,t],[r,cy],[cx,b],[l,cy]][i])};
+    const [x,y]=sampleCurvePath(st.pl.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='zigZag'){
+    const lanes=5;
+    if(!st.pl||st.pl.id!==`${id}:${l}:${t}:${r}:${b}`) st.pl={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedPolyline(lanes,i=>[i%2===0?l:r, t+H2*i/(lanes-1)])};
+    const [x,y]=sampleCurvePath(st.pl.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='stairStep'){
+    const rows=4,cols=5,n=rows*cols;
+    if(!st.pl||st.pl.id!==`${id}:${l}:${t}:${r}:${b}`) st.pl={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedPolyline(n,i=>{const row=i%rows,col=Math.floor(i/rows)%cols;return [l+col*W2/Math.max(1,cols-1), t+row*H2/Math.max(1,rows-1)];})};
+    const [x,y]=sampleCurvePath(st.pl.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='cornerTour'){
+    const ix=W2*0.18,iy=H2*0.18;
+    if(!st.pl||st.pl.id!==`${id}:${l}:${t}:${r}:${b}`) st.pl={id:`${id}:${l}:${t}:${r}:${b}`, curve:buildClosedPolyline(4,i=>[[l,t],[r-ix,t+iy],[r,b],[l+ix,b-iy]][i])};
+    const [x,y]=sampleCurvePath(st.pl.curve,travelPx); addTarget(x,y);
+  }
+  else if(id==='randomWalk'){
+    if(!st.rw||st.rw.state.seed!==rng.seed||travelPx<st.rw.state.lastSampleTravelPx){
+      const s=createRWState(rng,travelPx,l,t,r,b); st.rw={state:s,preview:{...s}};
+    }
+    const s=advanceRW(st.rw.state,st.rw.preview,rng,travelPx,l,t,r,b);
+    addTarget(s.x,s.y);
+  }
+  else if(id==='directionChange'){
+    if(!st.htState) st.htState={ht:null};
+    const [x,y]=sampleHardTurn(st.htState,rng,travelPx,l,t,r,b); addTarget(x,y);
+  }
+  else if(id==='teleport'){
+    const jd=clamp(Math.min(W2,H2)*0.55,420,820);
+    const bucket=Math.floor(travelPx/jd);
+    const phase=(travelPx-bucket*jd)/jd;
+    addTarget(rng.rangeAt(bucket*2,l,r), rng.rangeAt(bucket*2+1,t,b), colorA, phase<0.08?0.35:1);
+  }
+  else if(id==='multipleObjectTracking'){
+    const tc=clamp(Math.round(targetCount??1),1,6);
+    const dc=clamp(Math.round(distractorCount??5),0,20);
+    const total=tc+dc;
+    if(!st.mot||st.mot.seed!==rng.seed) st.mot={seed:rng.seed,objs:[]};
+    while(st.mot.objs.length<total){
+      const i=st.mot.objs.length;
+      const or=createRng(rng.seed+120000+i*9973);
+      const s=createRWState(or,travelPx,l,t,r,b);
+      st.mot.objs.push({rng:or,state:s,preview:{...s}});
+    }
+    if(st.mot.objs.length>total) st.mot.objs.length=total;
+    for(let i=0;i<total;i++){
+      const obj=st.mot.objs[i];
+      if(travelPx<obj.state.lastSampleTravelPx){ const s2=createRWState(obj.rng,travelPx,l,t,r,b); obj.state=s2; obj.preview={...s2}; }
+      const s=advanceRW(obj.state,obj.preview,obj.rng,travelPx,l,t,r,b);
+      addTarget(s.x,s.y,i<tc?colorA:colorB,1,i<tc?'target':'distractor');
+    }
+  }
+  else {
+    // fallback: ellipse
+    if(!st.cc||st.cc.id!==`ellipse:${l}:${t}:${r}:${b}`) st.cc={id:`ellipse:${l}:${t}:${r}:${b}`, curve:buildClosedCurve(160,p=>[cx+Math.cos(p*TAU)*rx, cy+Math.sin(p*TAU)*ry])};
+    const [x,y]=sampleCurvePath(st.cc.curve,travelPx); addTarget(x,y);
+  }
+
+  return frames;
+};
+
+// ── Lilac Chaser ────────────────────────────────────────────────
+const LILAC_N=12, LILAC_STEP=0.1;
+const LILAC_UNIT = Array.from({length:LILAC_N},(_,i)=>{
+  const a=-Math.PI/2+(i/LILAC_N)*TAU; return [Math.cos(a),Math.sin(a)];
+});
+const drawLilac = (ctx, W, H, scale, color, hiddenIdx) => {
+  const cx=W/2,cy=H/2,ms=Math.min(W,H);
+  const dotR=ms*0.0399*scale, orbitR=ms*(0.3381+0.0399)*scale-dotR;
+  const crossR=ms*0.0132*scale;
+  ctx.fillStyle='#d8d8da'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=color;
+  for(let i=0;i<LILAC_N;i++){
+    if(i===hiddenIdx) continue;
+    ctx.beginPath(); ctx.arc(cx+LILAC_UNIT[i][0]*orbitR, cy+LILAC_UNIT[i][1]*orbitR, dotR, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle='#050505'; ctx.lineWidth=ms*0.0125*scale; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(cx-crossR,cy); ctx.lineTo(cx+crossR,cy); ctx.moveTo(cx,cy-crossR); ctx.lineTo(cx,cy+crossR); ctx.stroke();
+};
+
+// ── Desenhar alvo ───────────────────────────────────────────────
+// sbsScaleX: fator de compensação horizontal para SBS (TV estica 2x no eixo X)
+// No SBS, para que círculo apareça redondo na TV, desenha elipse com rx = r*2, ry = r
+const drawShape = (ctx, x, y, r, shape, color, alpha, label, labelColor, labelWeight, sbsScaleX) => {
+  const sx = sbsScaleX || 1; // compensação horizontal (2.0 no SBS)
+  if(alpha!==undefined && alpha!==1) ctx.globalAlpha=alpha;
+  ctx.fillStyle=color; ctx.strokeStyle=color;
+  if(shape==='square'){ ctx.fillRect(x-r*sx,y-r,r*2*sx,r*2); }
+  else if(shape==='diamond'){ ctx.beginPath(); ctx.moveTo(x,y-r*1.25); ctx.lineTo(x+r*1.25*sx,y); ctx.lineTo(x,y+r*1.25); ctx.lineTo(x-r*1.25*sx,y); ctx.closePath(); ctx.fill(); }
+  else if(shape==='triangle'){ ctx.beginPath(); ctx.moveTo(x,y-r*1.25); ctx.lineTo(x+r*1.15*sx,y+r); ctx.lineTo(x-r*1.15*sx,y+r); ctx.closePath(); ctx.fill(); }
+  else if(shape==='cross'){ ctx.lineWidth=Math.max(3,r*0.45); ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x-r*sx,y); ctx.lineTo(x+r*sx,y); ctx.moveTo(x,y-r); ctx.lineTo(x,y+r); ctx.stroke(); }
+  else if(shape==='ring'){ ctx.beginPath(); ctx.ellipse(x,y,r*sx,r,0,0,TAU); ctx.lineWidth=Math.max(3,r*0.28); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.ellipse(x,y,r*sx,r,0,0,TAU); ctx.fill(); }
+  if(label){
+    const fs=Math.max(6,r*1.35); ctx.fillStyle=labelColor||'#fff';
+    ctx.font=`${labelWeight||'700'} ${fs}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(label, x, y+fs*0.04);
+  }
+  ctx.globalAlpha=1;
+};
+
+// ── DOM refs ────────────────────────────────────────────────────
+const trCanvas      = document.getElementById('trainer-canvas');
+const trCtx         = trCanvas.getContext('2d');
+const trDrillSel    = document.getElementById('tr-drill');
+const trPathSel     = document.getElementById('tr-path');
+const trSizeEl      = document.getElementById('tr-size');
+const trSizeVal     = document.getElementById('tr-size-val');
+const trSpeedEl     = document.getElementById('tr-speed');
+const trSpeedVal    = document.getElementById('tr-speed-val');
+const trColorEl     = document.getElementById('tr-color');
+const trLabelModeSel= document.getElementById('tr-label-mode');
+const trLabelFixed  = document.getElementById('tr-label-fixed');
+const trLabelFixedW = document.getElementById('tr-label-fixed-wrap');
+const trLabelColorEl= document.getElementById('tr-label-color');
+const trLabelColorW = document.getElementById('tr-label-color-wrap');
+const trBgSel       = document.getElementById('tr-bg');
+const trBinoSel     = document.getElementById('tr-bino');
+const trVergEl      = document.getElementById('tr-verg');
+const trVergVal     = document.getElementById('tr-verg-val');
+const trVergLabel   = document.getElementById('tr-verg-label');
+const trDistSel     = document.getElementById('tr-distractors');
+const trDistLabel   = document.getElementById('tr-dist-label');
+const trStartBtn    = document.getElementById('tr-start');
+const trStopBtn     = document.getElementById('tr-stop');
+const trFsBtn       = document.getElementById('tr-fullscreen');
+const trStatus      = document.getElementById('tr-status');
+const trFsOverlay   = document.getElementById('tr-fs-overlay');
+
+// ── Criar overlay fullscreen via JS ─────────────────────────────
+// O overlay é criado dinamicamente e injetado no elemento fullscreen
+// para que fique visível mesmo em tela cheia (onde só o elemento fullscreen é exibido)
+const trOverlay = document.createElement('div');
+trOverlay.id = 'tr-fs-overlay';
+trOverlay.className = 'tr-overlay-hidden';
+trOverlay.style.cssText = `
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  background:rgba(10,10,18,0.85); backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.18); border-radius:12px;
+  padding:12px 18px; z-index:9999;
+  flex-wrap:wrap; gap:10px; align-items:center;
+  max-width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.5);
+`;
+trOverlay.innerHTML = `
+  <select id="tr-fs-drill" style="background:#1e1e26;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:13px;"></select>
+  <select id="tr-fs-path" style="background:#1e1e26;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:13px;"></select>
+  <span style="color:#aaa;font-size:12px;">Tam</span>
+  <input id="tr-fs-size" type="range" min="10" max="80" value="30" style="width:70px;accent-color:#0dbf1f;">
+  <span id="tr-fs-size-val" style="font-size:12px;color:#aaa;min-width:22px;">30</span>
+  <span style="color:#aaa;font-size:12px;">Vel</span>
+  <input id="tr-fs-speed" type="range" min="1" max="30" value="8" style="width:70px;accent-color:#0dbf1f;">
+  <span id="tr-fs-speed-val" style="font-size:12px;color:#aaa;min-width:26px;">8.0</span>
+  <span style="color:#aaa;font-size:12px;">Cor</span>
+  <input id="tr-fs-color" type="color" value="#00e5ff" style="width:28px;height:24px;border:none;background:none;cursor:pointer;border-radius:4px;">
+  <select id="tr-fs-bg" style="background:#1e1e26;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:13px;">
+    <option value="dark">Escuro</option><option value="light">Claro</option>
+  </select>
+  <select id="tr-fs-bino" style="background:#1e1e26;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:13px;">
+    <option value="normal">Normal</option>
+    <option value="sbs-same">SBS mesmo</option>
+    <option value="sbs-diff">SBS sep.</option>
+  </select>
+  <select id="tr-fs-label-mode" style="background:#1e1e26;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:13px;">
+    <option value="none">Sem rótulo</option>
+    <option value="letters">Letras</option>
+    <option value="numbers">Números</option>
+    <option value="fixed">Fixo</option>
+  </select>
+  <input id="tr-fs-label-fixed" type="text" maxlength="3" value="A" placeholder="Texto"
+    style="width:38px;background:#1e1e26;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 6px;font-size:13px;text-align:center;display:none;">
+  <span style="color:#aaa;font-size:12px;">Cor rótulo</span>
+  <input id="tr-fs-label-color" type="color" value="#ffffff" style="width:28px;height:24px;border:none;background:none;cursor:pointer;border-radius:4px;">
+  <button id="tr-fs-start" style="background:#0dbf1f;color:#04211f;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;">▶ Iniciar</button>
+  <button id="tr-fs-stop" style="background:#e53935;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;">■ Parar</button>
+  <span style="color:#aaa;font-size:12px;margin-left:4px;">Vergência</span>
+  <input id="tr-fs-verg" type="range" min="-80" max="80" value="0" style="width:70px;accent-color:#0dbf1f;">
+  <span id="tr-fs-verg-val" style="font-size:12px;color:#aaa;min-width:32px;">0px</span>
+`;
+// Insere o overlay dentro do wrapper (não no body)
+document.getElementById('trainer-wrapper').appendChild(trOverlay);
+
+// CSS para fullscreen
+const trFsStyle = document.createElement('style');
+trFsStyle.textContent = `
+  #trainer-wrapper:fullscreen,
+  #trainer-wrapper:-webkit-full-screen {
+    width:100vw !important;
+    height:100vh !important;
+    border-radius:0 !important;
+    background:#000 !important;
+  }
+  #trainer-wrapper:fullscreen #trainer-canvas,
+  #trainer-wrapper:-webkit-full-screen #trainer-canvas {
+    width:100% !important;
+    height:100% !important;
+    aspect-ratio:unset !important;
+    border-radius:0 !important;
+    display:block !important;
+  }
+  :fullscreen #tr-fs-overlay,
+  :-webkit-full-screen #tr-fs-overlay {
+    display:flex !important;
+  }
+  :fullscreen #tr-fs-overlay.tr-overlay-hidden,
+  :-webkit-full-screen #tr-fs-overlay.tr-overlay-hidden {
+    display:none !important;
+  }
+`;
+document.head.appendChild(trFsStyle);
+
+// ── Sync painel fullscreen → painel principal ────────────────────
+const trFsDrill   = document.getElementById('tr-fs-drill');
+const trFsPath    = document.getElementById('tr-fs-path');
+const trFsSizeEl  = document.getElementById('tr-fs-size');
+const trFsSizeVal = document.getElementById('tr-fs-size-val');
+const trFsSpeedEl = document.getElementById('tr-fs-speed');
+const trFsSpeedVal= document.getElementById('tr-fs-speed-val');
+const trFsColorEl = document.getElementById('tr-fs-color');
+const trFsBgSel   = document.getElementById('tr-fs-bg');
+const trFsBinoSel = document.getElementById('tr-fs-bino');
+
+// Popula os selects do overlay com as mesmas opções
+['tr-drill','tr-path'].forEach(srcId=>{
+  const src=document.getElementById(srcId);
+  const dst=document.getElementById('tr-fs-'+srcId.replace('tr-',''));
+  if(!src||!dst) return;
+  src.querySelectorAll('option').forEach(o=>{ const c=o.cloneNode(true); dst.appendChild(c); });
+});
+
+// Sincronizar overlay ↔ painel principal (bidirecional)
+const trSync = (a, b, prop='value') => {
+  a.addEventListener('change',()=>{ b[prop]=a[prop]; });
+  a.addEventListener('input', ()=>{ b[prop]=a[prop]; });
+};
+trSync(trFsDrill,   trDrillSel);  trSync(trDrillSel,  trFsDrill);
+trSync(trFsPath,    trPathSel);   trSync(trPathSel,    trFsPath);
+trSync(trFsSizeEl,  trSizeEl);    trSync(trSizeEl,     trFsSizeEl);
+trSync(trFsSpeedEl, trSpeedEl);   trSync(trSpeedEl,    trFsSpeedEl);
+trSync(trFsColorEl, trColorEl);   trSync(trColorEl,    trFsColorEl);
+trSync(trFsBgSel,   trBgSel);     trSync(trBgSel,      trFsBgSel);
+trSync(trFsBinoSel, trBinoSel);   trSync(trBinoSel,    trFsBinoSel);
+
+// Sliders com display de valor
+const syncSliderVal = (el, valEl, fmt) => el.addEventListener('input',()=>{ valEl.textContent=fmt(el.value); });
+syncSliderVal(trSizeEl,   trSizeVal,   v=>v);
+syncSliderVal(trFsSizeEl, trFsSizeVal, v=>v);
+syncSliderVal(trSpeedEl,  trSpeedVal,  v=>parseFloat(v).toFixed(1));
+syncSliderVal(trFsSpeedEl,trFsSpeedVal,v=>parseFloat(v).toFixed(1));
+trVergEl.addEventListener('input',()=>trVergVal.textContent=trVergEl.value+'px');
+
+// Visibilidade condicional
+trBinoSel.addEventListener('change',()=>{ trVergLabel.style.display=trBinoSel.value!=='normal'?'flex':'none'; });
+trFsBinoSel.addEventListener('change',()=>{ trVergLabel.style.display=trFsBinoSel.value!=='normal'?'flex':'none'; });
+
+trDrillSel.addEventListener('change', updateDrillVisibility);
+function updateDrillVisibility(){
+  const d=trDrillSel.value;
+  const isMot=d==='multipleObjectTracking', isLilac=d==='lilac';
+  trDistLabel.style.display = isMot?'flex':'none';
+  const pl=document.getElementById('tr-path-label');
+  if(pl) pl.style.display = (isLilac||isMot)?'none':'flex';
+}
+
+// Rótulo: modo
+trLabelModeSel.addEventListener('change',()=>{
+  const m=trLabelModeSel.value;
+  trLabelFixedW.style.display = m==='fixed'?'flex':'none';
+  trLabelColorW.style.display = m!=='none'?'flex':'none';
+});
+
+// ── Gerador de rótulo aleatório ──────────────────────────────────
+const TR_LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const TR_DIGITS ='0123456789';
+let trLabelPool=[], trLabelIdx=0;
+function refreshLabelPool(){
+  const mode=trLabelModeSel.value;
+  if(mode==='letters') trLabelPool=[...TR_LETTERS].sort(()=>Math.random()-0.5);
+  else if(mode==='numbers') trLabelPool=[...TR_DIGITS].sort(()=>Math.random()-0.5);
+  trLabelIdx=0;
+}
+function getNextLabel(jumpBucket){
+  const mode=trLabelModeSel.value;
+  if(mode==='none') return null;
+  if(mode==='fixed') return trLabelFixed.value||'';
+  // Rotaciona o pool
+  if(trLabelIdx>=trLabelPool.length){ refreshLabelPool(); }
+  return trLabelPool[trLabelIdx++]||'?';
+}
+
+// ── Estado runtime ──────────────────────────────────────────────
+let trRunning=false, trAnimId=null, trT=0, trLastTime=null;
+let trRng=createRng(Math.floor(Math.random()*2147483646)+1);
+let trStateOD={cc:null,pl:null,rw:null,htState:null,mot:null};
+let trStateOE={cc:null,pl:null,rw:null,htState:null,mot:null};
+let trLilacIdx=0;
+// Para rótulo: muda a cada salto (teleport) ou intervalo fixo
+let trLastLabelBucket=-1, trCurrentLabel=null;
+
+// ── Visibilidade overlay fullscreen ─────────────────────────────
+let trFsVisible=false;
+function showTrOverlay(){
+  trFsVisible=true;
+  trOverlay.classList.remove('tr-overlay-hidden');
+}
+function hideTrOverlay(){
+  trFsVisible=false;
+  trOverlay.classList.add('tr-overlay-hidden');
+}
+function toggleTrOverlay(){ trFsVisible ? hideTrOverlay() : showTrOverlay(); }
+
+// ── Renderizar área ─────────────────────────────────────────────
+const renderArea = (ctx, ax, ay, aw, ah, travelPx, state, vergOffsetX) => {
+  const drill    = trDrillSel.value;
+  const path     = trPathSel.value;
+  const radiusPx = parseInt(trSizeEl.value);
+  const color    = trColorEl.value;
+  const labelColor = trLabelColorEl.value;
+  const bgMode   = trBgSel.value;
+  const bino     = trBinoSel.value;
+
+  if(drill==='lilac'){
+    const bgMode2 = trBgSel.value;
+    ctx.save(); ctx.beginPath(); ctx.rect(ax,ay,aw,ah); ctx.clip();
+    ctx.translate(ax,ay);
+    const lilacBg = bgMode2==='dark' ? '#2a2a2e' : '#d8d8da';
+    const lilacCross = bgMode2==='dark' ? '#eee' : '#050505';
+    // Usar drawLilac mas com cores adaptadas
+    const cx2=aw/2,cy2=ah/2,ms=Math.min(aw,ah);
+    const dotR=ms*0.0399, orbitR=ms*(0.3381+0.0399)-dotR, crossR=ms*0.0132;
+    ctx.fillStyle=lilacBg; ctx.fillRect(0,0,aw,ah);
+    ctx.fillStyle=color;
+    for(let i=0;i<LILAC_N;i++){
+      if(i===trLilacIdx) continue;
+      ctx.beginPath(); ctx.arc(cx2+LILAC_UNIT[i][0]*orbitR, cy2+LILAC_UNIT[i][1]*orbitR, dotR, 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle=lilacCross; ctx.lineWidth=ms*0.0125; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx2-crossR,cy2); ctx.lineTo(cx2+crossR,cy2); ctx.moveTo(cx2,cy2-crossR); ctx.lineTo(cx2,cy2+crossR); ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  // Fundo com grade sutil
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ax,ay,aw,ah); ctx.clip();
+  const isDark = bgMode==='dark';
+  ctx.fillStyle = isDark ? '#0e1014' : '#f5f5f7';
+  ctx.fillRect(ax,ay,aw,ah);
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.06)';
+  ctx.lineWidth=1;
+  const step=Math.max(60,Math.min(aw,ah)/6);
+  for(let x=ax+step;x<ax+aw;x+=step){ ctx.beginPath(); ctx.moveTo(x,ay); ctx.lineTo(x,ay+ah); ctx.stroke(); }
+  for(let y=ay+step;y<ay+ah;y+=step){ ctx.beginPath(); ctx.moveTo(ax,y); ctx.lineTo(ax+aw,y); ctx.stroke(); }
+  ctx.restore();
+
+  // Gerar frames do padrão
+  const speedPxSec = parseFloat(trSpeedEl.value) * 80;
+  const distCount = drill==='multipleObjectTracking' ? parseInt(trDistSel.value) : 5;
+
+  const patternId = drill==='pursuit'? path :
+                    drill==='jumps'  ? 'teleport' :
+                    drill==='multipleObjectTracking' ? 'multipleObjectTracking' : path;
+
+  const frames = samplePattern(
+    patternId, travelPx, aw, ah, radiusPx, speedPxSec, trRng, state,
+    color, 'rgba(100,170,255,0.7)', 1, distCount
+  );
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ax,ay,aw,ah); ctx.clip();
+  ctx.translate(ax, ay);
+
+  frames.forEach((f,i)=>{
+    const isTarget = f.role==='target';
+    const finalColor = f.color;
+    const vx = vergOffsetX || 0;
+    // No SBS, a TV estica cada metade 2x no eixo X — compensamos com elipse (sx=2)
+    const sbsSX = (bino==='sbs-same'||bino==='sbs-diff') ? 2 : 1;
+    let lbl = null;
+    if(isTarget){
+      const bucket = Math.floor(travelPx / 600);
+      if(bucket !== trLastLabelBucket){ trLastLabelBucket=bucket; trCurrentLabel=getNextLabel(bucket); }
+      lbl = trCurrentLabel;
+    }
+    drawShape(ctx, f.x+vx, f.y, f.radiusPx, 'circle', finalColor, f.alpha,
+              lbl, labelColor, '700', sbsSX);
+  });
+
+  ctx.restore();
+};
+
+// ── Loop principal ──────────────────────────────────────────────
+const trainerLoop = (timestamp) => {
+  if(!trRunning) return;
+  if(!trLastTime) trLastTime=timestamp;
+  const dt=Math.min((timestamp-trLastTime)/1000,0.05); trLastTime=timestamp;
+  trT+=dt;
+
+  const drill=trDrillSel.value;
+  const speedPxSec=parseFloat(trSpeedEl.value)*80;
+  const travelPx=trT*speedPxSec;
+  const bino=trBinoSel.value;
+  const vergPx=parseInt(trVergEl.value)||0;
+  const W=trCanvas.width, H=trCanvas.height;
+
+  // Lilac chaser: atualizar índice
+  if(drill==='lilac') trLilacIdx=Math.floor(trT/LILAC_STEP)%LILAC_N;
+
+  trCtx.clearRect(0,0,W,H);
+
+  if(bino==='normal'){
+    renderArea(trCtx,0,0,W,H,travelPx,trStateOD,0);
+  } else {
+    const hw=Math.floor(W/2);
+    // OD: metade esquerda
+    renderArea(trCtx,0,0,hw,H,travelPx,trStateOD,+vergPx);
+    // OE: metade direita
+    const travelOE = bino==='sbs-diff' ? travelPx*1.15 : travelPx;
+    const stateOE  = bino==='sbs-diff' ? trStateOE : trStateOD;
+    renderArea(trCtx,hw,0,hw,H,travelOE,stateOE,-vergPx);
+    // Separador
+    trCtx.save(); trCtx.strokeStyle='rgba(255,255,255,0.1)'; trCtx.lineWidth=2;
+    trCtx.beginPath(); trCtx.moveTo(hw,0); trCtx.lineTo(hw,H); trCtx.stroke(); trCtx.restore();
+  }
+
+  trAnimId=requestAnimationFrame(trainerLoop);
+};
+
+// ── Controles ───────────────────────────────────────────────────
+const startTrainer = () => {
+  if(trRunning) return;
+  const rect = trCanvas.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  // Se o canvas não tem tamanho (aba acabou de abrir), usa largura do container
+  const w = rect.width  > 10 ? rect.width  : (trCanvas.parentElement.clientWidth  || window.innerWidth);
+  const h = rect.height > 10 ? rect.height : (w * 9/16);
+  trCanvas.width  = Math.round(w * dpr);
+  trCanvas.height = Math.round(h * dpr);
+  trRunning=true; trT=0; trLastTime=null; trLilacIdx=0;
+  trRng=createRng(Math.floor(Math.random()*2147483646)+1);
+  trStateOD={cc:null,pl:null,rw:null,htState:null,mot:null};
+  trStateOE={cc:null,pl:null,rw:null,htState:null,mot:null};
+  trLastLabelBucket=-1; trCurrentLabel=null;
+  refreshLabelPool();
+  trStartBtn.disabled=true; trStopBtn.disabled=false;
+  trStatus.textContent='● Em andamento';
+  trAnimId=requestAnimationFrame(trainerLoop);
+};
+
+window.stopTrainer = () => {
+  trRunning=false;
+  if(trAnimId){cancelAnimationFrame(trAnimId);trAnimId=null;}
+  trLastTime=null;
+  if(trStartBtn) trStartBtn.disabled=false;
+  if(trStopBtn)  trStopBtn.disabled=true;
+  if(trStatus)   trStatus.textContent='';
+};
+
+trStartBtn.addEventListener('click', startTrainer);
+trStopBtn.addEventListener('click', window.stopTrainer);
+document.getElementById('tr-fs-stop').addEventListener('click', window.stopTrainer);
+document.getElementById('tr-fs-start').addEventListener('click', ()=>{ if(!trRunning) startTrainer(); });
+
+// Sincronizar rótulo e cor do rótulo entre overlay e painel
+const trFsLabelMode  = document.getElementById('tr-fs-label-mode');
+const trFsLabelFixed = document.getElementById('tr-fs-label-fixed');
+const trFsLabelColor = document.getElementById('tr-fs-label-color');
+
+trFsLabelMode.addEventListener('change', ()=>{
+  trLabelModeSel.value = trFsLabelMode.value;
+  trFsLabelFixed.style.display = trFsLabelMode.value === 'fixed' ? 'inline-block' : 'none';
+  trLabelColorW.style.display  = trFsLabelMode.value !== 'none' ? 'flex' : 'none';
+  refreshLabelPool();
+});
+trFsLabelFixed.addEventListener('input', ()=>{ trLabelFixed.value = trFsLabelFixed.value; });
+trFsLabelColor.addEventListener('input', ()=>{ trLabelColorEl.value = trFsLabelColor.value; });
+
+// Sincronizar painel → overlay para rótulo
+trLabelModeSel.addEventListener('change', ()=>{ trFsLabelMode.value = trLabelModeSel.value; });
+trLabelColorEl.addEventListener('input',  ()=>{ trFsLabelColor.value = trLabelColorEl.value; });
+
+// Vergência no overlay — sincroniza com o painel principal
+const trFsVergEl  = document.getElementById('tr-fs-verg');
+const trFsVergVal = document.getElementById('tr-fs-verg-val');
+trFsVergEl.addEventListener('input', ()=>{
+  trVergEl.value = trFsVergEl.value;
+  trVergVal.textContent = trFsVergEl.value + 'px';
+  trFsVergVal.textContent = trFsVergEl.value + 'px';
+});
+trVergEl.addEventListener('input', ()=>{
+  trFsVergEl.value = trVergEl.value;
+  trFsVergVal.textContent = trVergEl.value + 'px';
+});
+
+// Toque duplo em qualquer lugar da tela no fullscreen do treino: mostra/esconde overlay
+let trTapCount=0, trTapTimer=null;
+document.addEventListener('touchend', (e)=>{
+  // Só age se o treino estiver em fullscreen
+  if(!document.fullscreenElement) return;
+  if(!trRunning) return;
+  // Ignora toques nos botões do overlay
+  if(e.target.closest && e.target.closest('#tr-fs-overlay')) return;
+  trTapCount++;
+  if(trTapTimer) clearTimeout(trTapTimer);
+  trTapTimer=setTimeout(()=>{
+    if(trTapCount>=2) toggleTrOverlay();
+    trTapCount=0;
+  }, 350);
+}, {passive:true});
+
+trFsBtn.addEventListener('click', ()=>{
+  const wrapper = document.getElementById('trainer-wrapper');
+  if(!document.fullscreenElement){
+    wrapper.requestFullscreen().catch(err => console.warn('Fullscreen:', err));
+  } else {
+    trOverlay.classList.add('tr-overlay-hidden');
+    trFsVisible = false;
+    document.exitFullscreen();
+  }
+});
+
+// ResizeObserver: detecta qualquer mudança de tamanho do canvas (fullscreen, resize, etc.)
+// e atualiza as dimensões internas automaticamente
+const trResizeObserver = new ResizeObserver(entries => {
+  for(const entry of entries){
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.round(entry.contentRect.width  * dpr);
+    const h = Math.round(entry.contentRect.height * dpr);
+    if(w > 0 && h > 0 && (trCanvas.width !== w || trCanvas.height !== h)){
+      trCanvas.width  = w;
+      trCanvas.height = h;
+    }
+  }
+});
+trResizeObserver.observe(trCanvas);
+
+// Ao sair do fullscreen, esconde overlay
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement){
+    trOverlay.classList.add('tr-overlay-hidden');
+    trFsVisible = false;
+  }
+});
+}
+
 // ─── REGISTRO DO SERVICE WORKER (PWA — funciona offline) ───
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
