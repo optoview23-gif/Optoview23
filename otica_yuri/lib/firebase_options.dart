@@ -1,6 +1,3 @@
-// lib/firebase_options.dart
-// TODO: Run `flutterfire configure --project=otica-yuri` and replace this file with the generated output.
-// See: https://firebase.google.com/docs/flutter/setup
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
@@ -16,12 +13,11 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // TODO: Replace with values from google-services.json after running flutterfire configure
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_API_KEY',
-    appId: 'YOUR_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
+    apiKey: 'AIzaSyD6383nLU2-gxS3Oial_rfW1i7E3hNsKBk',
+    appId: '1:763653043562:android:8a74e83d595684c952a113',
+    messagingSenderId: '763653043562',
     projectId: 'otica-yuri',
-    storageBucket: 'otica-yuri.appspot.com',
+    storageBucket: 'otica-yuri.firebasestorage.app',
   );
 }
