@@ -1,4 +1,7 @@
 // lib/core/router/app_router.dart
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,16 +11,39 @@ import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
+// A ChangeNotifier that fires whenever auth state changes
+class _AuthNotifier extends ChangeNotifier {
+  StreamSubscription<User?>? _sub;
+  User? _user;
+
+  _AuthNotifier(Stream<User?> stream) {
+    _sub = stream.listen((user) {
+      _user = user;
+      notifyListeners();
+    });
+  }
+
+  User? get currentUser => _user;
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final authStream = ref.watch(authRepositoryProvider).authStateChanges();
+  final notifier = _AuthNotifier(authStream);
+  ref.onDispose(notifier.dispose);
 
   return GoRouter(
     initialLocation: '/inicio',
+    refreshListenable: notifier,
     redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull != null;
+      final isLoggedIn = notifier.currentUser != null;
       final isOnAuth = state.matchedLocation == '/login' ||
           state.matchedLocation == '/esqueci-senha';
-
       if (!isLoggedIn && !isOnAuth) return '/login';
       if (isLoggedIn && state.matchedLocation == '/login') return '/inicio';
       return null;

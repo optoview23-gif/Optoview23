@@ -18,6 +18,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _loading = false;
   bool _sent = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -27,15 +28,22 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Future<void> _send() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await ref
-        .read(authRepositoryProvider)
-        .sendPasswordResetEmail(_emailController.text.trim());
-    if (mounted) {
-      setState(() {
-        _loading = false;
-        _sent = true;
-      });
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .sendPasswordResetEmail(_emailController.text.trim());
+      if (mounted) setState(() { _loading = false; _sent = true; });
+    } on Exception {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _errorMessage = 'Erro ao enviar e-mail. Tente novamente.';
+        });
+      }
     }
   }
 
@@ -87,6 +95,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                               ? 'Informe um e-mail válido'
                               : null,
                         ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         _loading
                             ? const CircularProgressIndicator()
