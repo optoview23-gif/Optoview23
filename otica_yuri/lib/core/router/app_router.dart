@@ -20,6 +20,11 @@ import '../../features/estoque/data/item_estoque_model.dart';
 import '../../features/estoque/presentation/estoque_screen.dart';
 import '../../features/estoque/presentation/item_estoque_form_screen.dart';
 import '../../features/estoque/presentation/item_estoque_detalhe_screen.dart';
+import '../../features/pedidos/data/pedido_model.dart';
+import '../../features/pedidos/presentation/pedidos_screen.dart';
+import '../../features/pedidos/presentation/pedidos_cliente_screen.dart';
+import '../../features/pedidos/presentation/pedido_form_screen.dart';
+import '../../features/pedidos/presentation/pedido_detalhe_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
@@ -132,6 +137,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             item: state.extra as ItemEstoque),
       ),
 
+      // ── Pedidos por cliente ───────────────────────────────────────
+      GoRoute(
+        path: '/clientes/:clienteId/pedidos',
+        builder: (_, state) => PedidosClienteScreen(
+            clienteId: state.pathParameters['clienteId']!),
+      ),
+
+      // ── Pedidos (telas cheias, sem drawer) ────────────────────────
+      GoRoute(
+        path: '/pedidos/novo',
+        builder: (_, state) {
+          final extra = state.extra;
+          if (extra is Map<String, String?>) {
+            return PedidoFormScreen(
+              clienteId: extra['clienteId'],
+              clienteNome: extra['clienteNome'],
+            );
+          }
+          return const PedidoFormScreen();
+        },
+      ),
+      GoRoute(
+        path: '/pedidos/:id/editar',
+        builder: (_, state) =>
+            PedidoFormScreen(pedido: state.extra as Pedido?),
+      ),
+      GoRoute(
+        path: '/pedidos/:id',
+        builder: (_, state) =>
+            PedidoDetalheScreen(pedido: state.extra as Pedido),
+      ),
+
       // ── Shell (drawer + AppBar) ────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
@@ -152,8 +189,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/pedidos',
-            builder: (_, __) => const PlaceholderScreen(
-                title: 'Pedidos', icon: Icons.shopping_bag),
+            builder: (_, __) => const PedidosScreen(),
           ),
           GoRoute(
             path: '/estoque',

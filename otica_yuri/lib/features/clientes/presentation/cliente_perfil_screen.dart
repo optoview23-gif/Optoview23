@@ -204,7 +204,8 @@ class _ClientePerfilView extends ConsumerWidget {
               icon: Icons.shopping_bag_outlined,
               titulo: 'Pedidos',
               subtitulo: 'Histórico de pedidos de óculos',
-              onTap: () {},
+              onTap: () =>
+                  context.push('/clientes/${cliente.id}/pedidos'),
             ),
           ],
         ),
