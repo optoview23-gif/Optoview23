@@ -32,8 +32,9 @@ import '../../features/agenda/data/agendamento_model.dart';
 import '../../features/agenda/presentation/agenda_screen.dart';
 import '../../features/agenda/presentation/agendamento_form_screen.dart';
 import '../../features/agenda/presentation/agendamento_detalhe_screen.dart';
+import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/configuracoes/presentation/configuracoes_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
-import '../../shared/widgets/placeholder_screen.dart';
 
 class _AuthNotifier extends ChangeNotifier {
   StreamSubscription<User?>? _sub;
@@ -211,8 +212,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/inicio',
-            builder: (_, __) =>
-                const PlaceholderScreen(title: 'Início', icon: Icons.home),
+            builder: (_, __) => const DashboardScreen(),
           ),
           GoRoute(
             path: '/clientes',
@@ -240,8 +240,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/configuracoes',
-            builder: (_, __) => const PlaceholderScreen(
-                title: 'Configurações', icon: Icons.settings),
+            builder: (_, __) => const ConfiguracoesScreen(),
           ),
         ],
       ),
