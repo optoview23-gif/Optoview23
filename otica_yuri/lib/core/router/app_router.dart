@@ -25,6 +25,9 @@ import '../../features/pedidos/presentation/pedidos_screen.dart';
 import '../../features/pedidos/presentation/pedidos_cliente_screen.dart';
 import '../../features/pedidos/presentation/pedido_form_screen.dart';
 import '../../features/pedidos/presentation/pedido_detalhe_screen.dart';
+import '../../features/caixa/data/transacao_model.dart';
+import '../../features/caixa/presentation/caixa_screen.dart';
+import '../../features/caixa/presentation/transacao_form_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
@@ -169,6 +172,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             PedidoDetalheScreen(pedido: state.extra as Pedido),
       ),
 
+      // ── Caixa (telas cheias, sem drawer) ─────────────────────────
+      GoRoute(
+        path: '/caixa/nova',
+        builder: (_, __) => const TransacaoFormScreen(),
+      ),
+      GoRoute(
+        path: '/caixa/:id/editar',
+        builder: (_, state) => TransacaoFormScreen(
+            transacao: state.extra as Transacao?),
+      ),
+
       // ── Shell (drawer + AppBar) ────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
@@ -197,8 +211,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/caixa',
-            builder: (_, __) => const PlaceholderScreen(
-                title: 'Caixa', icon: Icons.attach_money),
+            builder: (_, __) => const CaixaScreen(),
           ),
           GoRoute(
             path: '/agenda',
