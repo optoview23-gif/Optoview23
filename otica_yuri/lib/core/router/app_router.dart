@@ -1,4 +1,3 @@
-// lib/core/router/app_router.dart
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,10 +7,13 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
+import '../../features/clientes/data/cliente_model.dart';
+import '../../features/clientes/presentation/clientes_screen.dart';
+import '../../features/clientes/presentation/cliente_form_screen.dart';
+import '../../features/clientes/presentation/cliente_perfil_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
-// A ChangeNotifier that fires whenever auth state changes
 class _AuthNotifier extends ChangeNotifier {
   StreamSubscription<User?>? _sub;
   User? _user;
@@ -42,10 +44,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: (context, state) {
       final isLoggedIn = notifier.currentUser != null;
-      final isOnAuth = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/esqueci-senha';
+      final loc = state.matchedLocation;
+      final isOnAuth =
+          loc == '/login' || loc == '/esqueci-senha';
       if (!isLoggedIn && !isOnAuth) return '/login';
-      if (isLoggedIn && state.matchedLocation == '/login') return '/inicio';
+      if (isLoggedIn && loc == '/login') return '/inicio';
       return null;
     },
     routes: [
@@ -54,42 +57,67 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/esqueci-senha',
         builder: (_, __) => const ForgotPasswordScreen(),
       ),
+
+      // ── Clientes: detail / form (sem drawer, tela cheia) ──────────
+      GoRoute(
+        path: '/clientes/novo',
+        builder: (_, __) => const ClienteFormScreen(),
+      ),
+      GoRoute(
+        path: '/clientes/:id/editar',
+        builder: (_, state) => ClienteFormScreen(
+            cliente: state.extra as Cliente?),
+      ),
+      GoRoute(
+        path: '/clientes/:id',
+        builder: (_, state) => ClientePerfilScreen(
+            clienteId: state.pathParameters['id']!),
+      ),
+
+      // ── Shell (drawer + AppBar) ───────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
             MainScaffold(location: state.matchedLocation, child: child),
         routes: [
           GoRoute(
-              path: '/inicio',
-              builder: (_, __) =>
-                  const PlaceholderScreen(title: 'Início', icon: Icons.home)),
+            path: '/inicio',
+            builder: (_, __) =>
+                const PlaceholderScreen(title: 'Início', icon: Icons.home),
+          ),
           GoRoute(
-              path: '/clientes',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Clientes', icon: Icons.people)),
+            path: '/clientes',
+            builder: (_, __) => const ClientesScreen(),
+          ),
           GoRoute(
-              path: '/prontuario',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Prontuário', icon: Icons.visibility)),
+            path: '/prontuario',
+            builder: (_, __) => const PlaceholderScreen(
+                title: 'Prontuário', icon: Icons.visibility),
+          ),
           GoRoute(
-              path: '/pedidos',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Pedidos', icon: Icons.shopping_bag)),
+            path: '/pedidos',
+            builder: (_, __) => const PlaceholderScreen(
+                title: 'Pedidos', icon: Icons.shopping_bag),
+          ),
           GoRoute(
-              path: '/estoque',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Estoque', icon: Icons.inventory)),
+            path: '/estoque',
+            builder: (_, __) => const PlaceholderScreen(
+                title: 'Estoque', icon: Icons.inventory),
+          ),
           GoRoute(
-              path: '/caixa',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Caixa', icon: Icons.attach_money)),
+            path: '/caixa',
+            builder: (_, __) => const PlaceholderScreen(
+                title: 'Caixa', icon: Icons.attach_money),
+          ),
           GoRoute(
-              path: '/agenda',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Agenda', icon: Icons.calendar_today)),
+            path: '/agenda',
+            builder: (_, __) => const PlaceholderScreen(
+                title: 'Agenda', icon: Icons.calendar_today),
+          ),
           GoRoute(
-              path: '/configuracoes',
-              builder: (_, __) => const PlaceholderScreen(
-                  title: 'Configurações', icon: Icons.settings)),
+            path: '/configuracoes',
+            builder: (_, __) => const PlaceholderScreen(
+                title: 'Configurações', icon: Icons.settings),
+          ),
         ],
       ),
     ],
