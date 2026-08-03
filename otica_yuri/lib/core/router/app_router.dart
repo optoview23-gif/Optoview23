@@ -5,17 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
-
-// Temporary placeholder until Task 7 creates MainScaffold and PlaceholderScreen
-class _TempPlaceholder extends StatelessWidget {
-  final String title;
-  const _TempPlaceholder({required this.title});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: Center(child: Text(title)),
-      );
-}
+import '../../shared/widgets/main_scaffold.dart';
+import '../../shared/widgets/placeholder_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -38,41 +29,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ForgotPasswordScreen(),
       ),
       ShellRoute(
-        builder: (context, state, child) => child,
+        builder: (context, state, child) =>
+            MainScaffold(location: state.matchedLocation, child: child),
         routes: [
           GoRoute(
-            path: '/inicio',
-            builder: (_, __) => const _TempPlaceholder(title: 'Início'),
-          ),
+              path: '/inicio',
+              builder: (_, __) =>
+                  const PlaceholderScreen(title: 'Início', icon: Icons.home)),
           GoRoute(
-            path: '/clientes',
-            builder: (_, __) => const _TempPlaceholder(title: 'Clientes'),
-          ),
+              path: '/clientes',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Clientes', icon: Icons.people)),
           GoRoute(
-            path: '/prontuario',
-            builder: (_, __) => const _TempPlaceholder(title: 'Prontuário'),
-          ),
+              path: '/prontuario',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Prontuário', icon: Icons.visibility)),
           GoRoute(
-            path: '/pedidos',
-            builder: (_, __) => const _TempPlaceholder(title: 'Pedidos'),
-          ),
+              path: '/pedidos',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Pedidos', icon: Icons.shopping_bag)),
           GoRoute(
-            path: '/estoque',
-            builder: (_, __) => const _TempPlaceholder(title: 'Estoque'),
-          ),
+              path: '/estoque',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Estoque', icon: Icons.inventory)),
           GoRoute(
-            path: '/caixa',
-            builder: (_, __) => const _TempPlaceholder(title: 'Caixa'),
-          ),
+              path: '/caixa',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Caixa', icon: Icons.attach_money)),
           GoRoute(
-            path: '/agenda',
-            builder: (_, __) => const _TempPlaceholder(title: 'Agenda'),
-          ),
+              path: '/agenda',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Agenda', icon: Icons.calendar_today)),
           GoRoute(
-            path: '/configuracoes',
-            builder: (_, __) =>
-                const _TempPlaceholder(title: 'Configurações'),
-          ),
+              path: '/configuracoes',
+              builder: (_, __) => const PlaceholderScreen(
+                  title: 'Configurações', icon: Icons.settings)),
         ],
       ),
     ],
