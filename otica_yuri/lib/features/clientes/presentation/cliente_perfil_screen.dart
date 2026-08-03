@@ -197,7 +197,7 @@ class _ClientePerfilView extends ConsumerWidget {
               icon: Icons.visibility_outlined,
               titulo: 'Prontuário Ótico',
               subtitulo: 'Receitas e histórico de consultas',
-              onTap: () {},
+              onTap: () => context.push('/prontuario/${cliente.id}'),
             ),
             const SizedBox(height: 8),
             _historicoCard(

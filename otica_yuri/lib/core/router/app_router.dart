@@ -11,6 +11,11 @@ import '../../features/clientes/data/cliente_model.dart';
 import '../../features/clientes/presentation/clientes_screen.dart';
 import '../../features/clientes/presentation/cliente_form_screen.dart';
 import '../../features/clientes/presentation/cliente_perfil_screen.dart';
+import '../../features/prontuario/data/receita_model.dart';
+import '../../features/prontuario/presentation/prontuario_screen.dart';
+import '../../features/prontuario/presentation/receitas_cliente_screen.dart';
+import '../../features/prontuario/presentation/receita_form_screen.dart';
+import '../../features/prontuario/presentation/receita_detalhe_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
@@ -58,7 +63,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ForgotPasswordScreen(),
       ),
 
-      // ── Clientes: detail / form (sem drawer, tela cheia) ──────────
+      // ── Clientes (telas cheias, sem drawer) ────────────────────────
       GoRoute(
         path: '/clientes/novo',
         builder: (_, __) => const ClienteFormScreen(),
@@ -74,7 +79,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             clienteId: state.pathParameters['id']!),
       ),
 
-      // ── Shell (drawer + AppBar) ───────────────────────────────────
+      // ── Prontuário (telas cheias, sem drawer) ──────────────────────
+      GoRoute(
+        path: '/prontuario/:clienteId/nova',
+        builder: (_, state) => ReceitaFormScreen(
+            clienteId: state.pathParameters['clienteId']!),
+      ),
+      GoRoute(
+        path: '/prontuario/:clienteId/:receitaId/editar',
+        builder: (_, state) => ReceitaFormScreen(
+          clienteId: state.pathParameters['clienteId']!,
+          receita: state.extra as Receita?,
+        ),
+      ),
+      GoRoute(
+        path: '/prontuario/:clienteId/:receitaId',
+        builder: (_, state) {
+          final receita = state.extra as Receita?;
+          if (receita == null) {
+            return ReceitasClienteScreen(
+                clienteId: state.pathParameters['clienteId']!);
+          }
+          return ReceitaDetalheScreen(
+            clienteId: state.pathParameters['clienteId']!,
+            receita: receita,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/prontuario/:clienteId',
+        builder: (_, state) => ReceitasClienteScreen(
+            clienteId: state.pathParameters['clienteId']!),
+      ),
+
+      // ── Shell (drawer + AppBar) ────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
             MainScaffold(location: state.matchedLocation, child: child),
@@ -90,8 +128,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/prontuario',
-            builder: (_, __) => const PlaceholderScreen(
-                title: 'Prontuário', icon: Icons.visibility),
+            builder: (_, __) => const ProntuarioScreen(),
           ),
           GoRoute(
             path: '/pedidos',
