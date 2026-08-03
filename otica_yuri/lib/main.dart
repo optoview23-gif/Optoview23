@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_options.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,18 +17,18 @@ void main() async {
   runApp(const ProviderScope(child: OptoViewApp()));
 }
 
-class OptoViewApp extends StatelessWidget {
+class OptoViewApp extends ConsumerWidget {
   const OptoViewApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+    return MaterialApp.router(
       title: 'Ótica Yuri',
       debugShowCheckedModeBanner: false,
-      locale: Locale('pt', 'BR'),
-      home: Scaffold(
-        body: Center(child: Text('OptoView — Ótica Yuri')),
-      ),
+      locale: const Locale('pt', 'BR'),
+      theme: AppTheme.light,
+      routerConfig: router,
     );
   }
 }
