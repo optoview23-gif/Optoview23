@@ -28,6 +28,10 @@ import '../../features/pedidos/presentation/pedido_detalhe_screen.dart';
 import '../../features/caixa/data/transacao_model.dart';
 import '../../features/caixa/presentation/caixa_screen.dart';
 import '../../features/caixa/presentation/transacao_form_screen.dart';
+import '../../features/agenda/data/agendamento_model.dart';
+import '../../features/agenda/presentation/agenda_screen.dart';
+import '../../features/agenda/presentation/agendamento_form_screen.dart';
+import '../../features/agenda/presentation/agendamento_detalhe_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
@@ -183,6 +187,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             transacao: state.extra as Transacao?),
       ),
 
+      // ── Agenda (telas cheias, sem drawer) ─────────────────────────
+      GoRoute(
+        path: '/agenda/novo',
+        builder: (_, state) => AgendamentoFormScreen(
+            dataInicial: state.extra as DateTime?),
+      ),
+      GoRoute(
+        path: '/agenda/:id/editar',
+        builder: (_, state) => AgendamentoFormScreen(
+            agendamento: state.extra as Agendamento?),
+      ),
+      GoRoute(
+        path: '/agenda/:id',
+        builder: (_, state) => AgendamentoDetalheScreen(
+            agendamento: state.extra as Agendamento),
+      ),
+
       // ── Shell (drawer + AppBar) ────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
@@ -215,8 +236,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/agenda',
-            builder: (_, __) => const PlaceholderScreen(
-                title: 'Agenda', icon: Icons.calendar_today),
+            builder: (_, __) => const AgendaScreen(),
           ),
           GoRoute(
             path: '/configuracoes',
