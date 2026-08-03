@@ -16,6 +16,10 @@ import '../../features/prontuario/presentation/prontuario_screen.dart';
 import '../../features/prontuario/presentation/receitas_cliente_screen.dart';
 import '../../features/prontuario/presentation/receita_form_screen.dart';
 import '../../features/prontuario/presentation/receita_detalhe_screen.dart';
+import '../../features/estoque/data/item_estoque_model.dart';
+import '../../features/estoque/presentation/estoque_screen.dart';
+import '../../features/estoque/presentation/item_estoque_form_screen.dart';
+import '../../features/estoque/presentation/item_estoque_detalhe_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
@@ -112,6 +116,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             clienteId: state.pathParameters['clienteId']!),
       ),
 
+      // ── Estoque (telas cheias, sem drawer) ────────────────────────
+      GoRoute(
+        path: '/estoque/novo',
+        builder: (_, __) => const ItemEstoqueFormScreen(),
+      ),
+      GoRoute(
+        path: '/estoque/:id/editar',
+        builder: (_, state) => ItemEstoqueFormScreen(
+            item: state.extra as ItemEstoque?),
+      ),
+      GoRoute(
+        path: '/estoque/:id',
+        builder: (_, state) => ItemEstoqueDetalheScreen(
+            item: state.extra as ItemEstoque),
+      ),
+
       // ── Shell (drawer + AppBar) ────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) =>
@@ -137,8 +157,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/estoque',
-            builder: (_, __) => const PlaceholderScreen(
-                title: 'Estoque', icon: Icons.inventory),
+            builder: (_, __) => const EstoqueScreen(),
           ),
           GoRoute(
             path: '/caixa',
