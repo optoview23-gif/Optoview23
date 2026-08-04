@@ -194,6 +194,8 @@
   .dot-left{background:#3fb8af;}
   .dot-right{background:#d9822b;}
   .dot-center{background:#111;}
+  .dot-od{background:#cc2200;}
+  .dot-oe{background:#009922;}
 </style>
 </head>
 <body>
@@ -399,6 +401,7 @@ if(localStorage.getItem('optoview_auth') === '1'){
           <option value="interlace">Entrelaçado linha a linha (monitor 3D passivo)</option>
           <option value="flat">Sem dissociação (referência, todas letras pretas)</option>
           <option value="channel">Calibração de canal (fundo verde/vermelho)</option>
+          <option value="sbs-bicromatico">SBS Bicromático — Balanço Binocular</option>
         </select>
       </label>
 
@@ -515,11 +518,18 @@ if(localStorage.getItem('optoview_auth') === '1'){
       <span><span class="dot dot-center"></span>Linha central — binocular (âncora de fusão)</span>
       <span><span class="dot dot-right"></span>Linha inferior — visível só pelo olho esquerdo</span>
     </div>
+    <div class="etdrs-legend hidden" id="etdrs-legend-bicromatico">
+      <span><span class="dot dot-od"></span>Metade esquerda — fundo <strong>vermelho</strong> → olho direito (OD)</span>
+      <span><span class="dot dot-oe"></span>Metade direita — fundo <strong>verde</strong> → olho esquerdo (OE)</span>
+      <span style="font-size:11px; color:var(--muted);">Pergunte qual lado está mais nítido · Endpoint: igualdade entre os dois lados</span>
+    </div>
 
     <div class="note">
       Tabela ETDRS (conjunto Sloan: C D H K N O R S V Z), progressão logMAR em notação de pés (20/x), com dissociação óptica via entrelaçamento linha a linha para monitor 3D passivo, seguindo a convenção cruzada do Thomson Test Chart: o lado esquerdo/linha superior da tela é visto pelo <strong>olho direito</strong>, e o lado direito/linha inferior pelo <strong>olho esquerdo</strong>. Tamanho das letras calculado a partir da diagonal, resolução e distância de teste informadas acima. Use as setas para avançar do 20/200 até o 20/20. Se o paciente não conseguir identificar as letras/linha de um lado enquanto lê normalmente a âncora e o outro lado, isso sugere possível supressão do olho correspondente — correlacione clinicamente, este é um instrumento de apoio, não substitui teste de supressão validado.
       <br><br>
       <strong>Sobre o modo "Side by Side":</strong> use esse formato para TVs 3D passivas (em vez do monitor com micropolarizador). Antes de usar, selecione "Side by Side" (ou "SBS") no menu 3D da própria TV — é ela quem expande cada metade da tela de volta ao tamanho cheio e faz a separação óptica pelos óculos polarizados.
+      <br><br>
+      <strong>Sobre o modo "SBS Bicromático — Balanço Binocular":</strong> combina a dissociação polarizada SBS com fundos bicromáticos (vermelho para OD, verde para OE), seguindo a convenção clínica das tabelas polarizadas com filtros bicromáticos. Com os óculos polarizados, o OD vê somente a metade vermelha (esquerda da tela) e o OE somente a metade verde (direita). Pergunte ao paciente qual lado está mais nítido — o lado mais claro indica o olho com melhor foco relativo. Ajuste a refração do olho mais nítido (adicione +0,25 D de cada vez) até que ambos os lados pareçam igualmente nítidos (endpoint). Esta técnica é equivalente ao Teste de Turville Infinity Balance e ao uso do cartão bicromático polarizado de Borish.
     </div>
   </div>
 
@@ -831,6 +841,7 @@ const etNextBtn = document.getElementById('etdrs-next');
 const etBlockLabel = document.getElementById('etdrs-block-label');
 const etLegendVertical = document.getElementById('etdrs-legend-vertical');
 const etLegendHorizontal = document.getElementById('etdrs-legend-horizontal');
+const etLegendBicromatico = document.getElementById('etdrs-legend-bicromatico');
 const etSbsAlignControls = document.getElementById('etdrs-sbs-align-controls');
 const etSbsUpBtn = document.getElementById('etdrs-sbs-up');
 const etSbsDownBtn = document.getElementById('etdrs-sbs-down');
@@ -1383,14 +1394,15 @@ function renderEtdrs(){
   const totalBlocks = getTotalBlocks();
   const isVergence = (etContentTypeSel.value === 'vergence');
 
-  document.getElementById('etdrs-canvas-wrap').classList.toggle('sbs-active', mode === 'sbs');
+  const isSbs = (mode === 'sbs' || mode === 'sbs-bicromatico');
+  document.getElementById('etdrs-canvas-wrap').classList.toggle('sbs-active', isSbs);
   // Fundo preto: ativo quando o teste de vergência usa a figura Worth
   const isWorth = (isVergence && vergShapeSel.value === 'worth');
   document.getElementById('etdrs-canvas-wrap').classList.toggle('dark-bg', isWorth);
-  etSbsAlignControls.style.display = (mode === 'sbs' && !isVergence) ? 'flex' : 'none';
+  etSbsAlignControls.style.display = (isSbs && !isVergence) ? 'flex' : 'none';
   // Botões de ajuste fino SBS (calibração de tela) só aparecem no modo Letras — no modo Vergência,
   // o mesmo alinhamento SBS já foi calibrado antes e não precisa de controle repetido aqui.
-  const showSbsBtns = (mode === 'sbs') && !isVergence;
+  const showSbsBtns = isSbs && !isVergence;
   document.getElementById('etdrs-fs-sbs-up').style.display = showSbsBtns ? 'inline-block' : 'none';
   document.getElementById('etdrs-fs-sbs-down').style.display = showSbsBtns ? 'inline-block' : 'none';
   document.getElementById('etdrs-fs-sbs-left').style.display = showSbsBtns ? 'inline-block' : 'none';
@@ -1399,8 +1411,10 @@ function renderEtdrs(){
   // Toggle de painéis específicos do modo Vergência (esconde estrutura de letras/blocos, que não se aplica aqui)
   vergPanel.style.display = isVergence ? 'block' : 'none';
   document.getElementById('etdrs-block-nav').style.display = isVergence ? 'none' : 'flex';
-  etLegendVertical.classList.toggle('hidden', isVergence || orientation !== 'vertical');
-  etLegendHorizontal.classList.toggle('hidden', isVergence || orientation !== 'horizontal');
+  const isBicromatico = (mode === 'sbs-bicromatico');
+  etLegendVertical.classList.toggle('hidden', isVergence || isBicromatico || orientation !== 'vertical');
+  etLegendHorizontal.classList.toggle('hidden', isVergence || isBicromatico || orientation !== 'horizontal');
+  etLegendBicromatico.classList.toggle('hidden', isVergence || !isBicromatico);
   document.getElementById('verg-fs-up').style.display = isVergence ? 'inline-block' : 'none';
   document.getElementById('verg-fs-down').style.display = isVergence ? 'inline-block' : 'none';
   document.getElementById('verg-fs-left').style.display = isVergence ? 'inline-block' : 'none';
@@ -1504,6 +1518,18 @@ function renderEtdrs(){
     // sbsVerticalOffset/sbsHorizontalOffset compensam desalinhamento físico entre as duas metades, causado pela TV/painel 3D.
     const leftCanvas = buildEtdrsEyeCanvas('left');
     const rightCanvas = buildEtdrsEyeCanvas('right');
+    etctx.clearRect(0,0,EW,EH);
+    etctx.drawImage(rightCanvas, 0, 0, EW, EH, 0, 0, EW/2, EH);
+    etctx.drawImage(leftCanvas,  0, 0, EW, EH, EW/2 + sbsHorizontalOffset, sbsVerticalOffset, EW/2, EH);
+  } else if(mode === 'sbs-bicromatico'){
+    // SBS Bicromático — Balanço Binocular (equivalente ao cartão bicromático polarizado de Borish / Turville Infinity Balance).
+    // Convenção Thomson: metade esquerda = OD em fundo VERMELHO; metade direita = OE em fundo VERDE.
+    // Cada olho vê suas letras polarizadas dissociadas + âncora central na cor do seu canal.
+    // Procedimento: perguntar ao paciente qual lado (vermelho/OD ou verde/OE) está mais nítido;
+    // o lado mais claro indica o olho com melhor foco relativo. Adicionar +0,25 D no olho mais nítido
+    // até igualar a percepção. Endpoint: igualdade de nitidez entre os dois lados.
+    const rightCanvas = buildEtdrsEyeCanvas('right', '#cc2200');
+    const leftCanvas  = buildEtdrsEyeCanvas('left',  '#009922');
     etctx.clearRect(0,0,EW,EH);
     etctx.drawImage(rightCanvas, 0, 0, EW, EH, 0, 0, EW/2, EH);
     etctx.drawImage(leftCanvas,  0, 0, EW, EH, EW/2 + sbsHorizontalOffset, sbsVerticalOffset, EW/2, EH);
