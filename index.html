@@ -206,8 +206,9 @@
     display:flex; align-items:center; justify-content:center;
     padding:0;
     overflow:hidden;
+    max-width:100%;
   }
-  #stereo-canvas{display:block;}
+  #stereo-canvas{display:block; max-width:100%; height:auto;}
 </style>
 </head>
 <body>
@@ -809,9 +810,16 @@ if(localStorage.getItem('optoview_auth') === '1'){
           <option value="6">Extra-grosso (6px)</option>
         </select>
       </label>
+      <label id="stereo-style-group" style="display:none">Estilo
+        <select id="stereo-style">
+          <option value="flat">Colorido</option>
+          <option value="silhueta">Silhueta</option>
+        </select>
+      </label>
       <button class="primary" id="stereo-regenerate">Nova imagem</button>
       <button class="fs-btn" id="stereo-fullscreen">⛶ Tela cheia</button>
       <span id="stereo-target-pos" style="display:none; font-size:12px; background:#fffde7; color:#e65100; padding:4px 12px; border-radius:4px; font-weight:700; border:1px solid #ffb300;"></span>
+      <span id="stereo-tap-hint" style="display:none; font-size:12px; color:var(--muted); font-style:italic;">Toque no objeto indicado pelo paciente</span>
     </div>
 
     <div class="controls" style="justify-content:center; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -829,8 +837,8 @@ if(localStorage.getItem('optoview_auth') === '1'){
         <button id="stereo-fs-regenerate">Nova imagem</button>
         <span id="stereo-fs-label" style="font-size:12px; color:#ccc; min-width:160px; text-align:center;"></span>
         <button id="stereo-fs-next">▶</button>
-        <button id="stereo-fs-pass" style="background:#43a047;">✓ Percebeu</button>
-        <button id="stereo-fs-fail" style="background:#e53935;">✗ Não percebeu</button>
+        <button id="stereo-fs-pass" style="display:none">✓ Percebeu</button>
+        <button id="stereo-fs-fail" style="display:none">✗ Não percebeu</button>
         <button class="fs-exit" id="stereo-fs-exit">Sair ✕</button>
       </div>
     </div>
@@ -3174,6 +3182,7 @@ const stereoObjectSel= document.getElementById('stereo-object');
 const stereoLevelSel = document.getElementById('stereo-level');
 const stereoDotSizeSel   = document.getElementById('stereo-dot-size');
 const stereoDisparityLbl = document.getElementById('stereo-disparity-label');
+const stereoStyleSel     = document.getElementById('stereo-style');
 const SW = stereoCanvas.width, SH = stereoCanvas.height;
 
 const STEREO_LEVELS = [
@@ -3197,10 +3206,10 @@ let stereoResults          = [];
 let stereoLateralTarget    = 0; // índice 0-3 do objeto com disparidade
 
 const LAT_POSITIONS = [
-  {x: 0.25, y: 0.33, name: 'superior esquerdo (1)'},
-  {x: 0.75, y: 0.33, name: 'superior direito (2)'},
-  {x: 0.25, y: 0.67, name: 'inferior esquerdo (3)'},
-  {x: 0.75, y: 0.67, name: 'inferior direito (4)'},
+  {x: 0.50, y: 0.18, name: 'superior (1)'},
+  {x: 0.18, y: 0.50, name: 'esquerdo (2)'},
+  {x: 0.82, y: 0.50, name: 'direito (3)'},
+  {x: 0.50, y: 0.82, name: 'inferior (4)'},
 ];
 
 function arcsecToPixelsStereo(arcsec){
@@ -3456,18 +3465,16 @@ function drawLatButterfly(ctx, cx, cy, r){
 }
 
 function drawLatHeart(ctx, cx, cy, r){
-  ctx.save();
+  const lR = r * 0.58, topY = cy - r * 0.20;
   ctx.beginPath();
-  ctx.moveTo(cx, cy+r*0.82);
-  ctx.bezierCurveTo(cx-r*1.4, cy+r*0.25, cx-r*1.75, cy-r*0.78, cx, cy-r*0.18);
-  ctx.bezierCurveTo(cx+r*1.75, cy-r*0.78, cx+r*1.4, cy+r*0.25, cx, cy+r*0.82);
+  ctx.arc(cx - lR, topY, lR, Math.PI, 0, false);
+  ctx.arc(cx + lR, topY, lR, Math.PI, 0, false);
+  ctx.bezierCurveTo(cx + lR*2.2, cy + r*0.38, cx + r*0.38, cy + r, cx, cy + r);
+  ctx.bezierCurveTo(cx - r*0.38, cy + r, cx - lR*2.2, cy + r*0.38, cx - lR*2, topY);
   ctx.closePath();
-  const g = ctx.createRadialGradient(cx, cy-r*0.1, r*0.05, cx, cy, r*1.1);
-  g.addColorStop(0,'#ff8a80'); g.addColorStop(0.5,'#f44336'); g.addColorStop(1,'#b71c1c');
-  ctx.fillStyle = g; ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx-r*0.42, cy-r*0.22, r*0.22, r*0.13, -0.4, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill();
-  ctx.restore();
+  ctx.fillStyle = '#ef4444'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx - lR*0.80, topY - lR*0.35, lR*0.30, lR*0.17, -0.4, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.40)'; ctx.fill();
 }
 
 function drawLatBalloon(ctx, cx, cy, r){
@@ -3503,7 +3510,53 @@ function drawLatFish(ctx, cx, cy, r){
   ctx.closePath(); ctx.fillStyle = '#e65100'; ctx.fill();
 }
 
-function drawLatObjectAt(ctx, objType, cx, cy, r){
+function drawLatObjectAt(ctx, objType, cx, cy, r, style){
+  if(style === 'silhueta'){
+    ctx.fillStyle = '#2e2e30';
+    if(objType === 'ball'){
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    } else if(objType === 'star'){
+      const n = 5;
+      ctx.beginPath();
+      for(let i = 0; i < n*2; i++){
+        const a = (Math.PI/n)*i - Math.PI/2;
+        const rad = i%2===0 ? r : r*0.42;
+        i===0 ? ctx.moveTo(cx+Math.cos(a)*rad, cy+Math.sin(a)*rad)
+               : ctx.lineTo(cx+Math.cos(a)*rad, cy+Math.sin(a)*rad);
+      }
+      ctx.closePath(); ctx.fill();
+    } else if(objType === 'bear'){
+      const eR = r*0.36, eox = r*0.72, eoy = r*0.74;
+      [[cx-eox,cy-eoy],[cx+eox,cy-eoy]].forEach(([ex,ey])=>{
+        ctx.beginPath(); ctx.arc(ex, ey, eR, 0, Math.PI*2); ctx.fill();
+      });
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    } else if(objType === 'butterfly'){
+      [[-1],[1]].forEach(([sx])=>{
+        ctx.beginPath(); ctx.ellipse(cx+sx*r*0.60, cy-r*0.28, r*0.68, r*0.50, sx*0.22, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx+sx*r*0.45, cy+r*0.30, r*0.52, r*0.38, sx*0.30, 0, Math.PI*2); ctx.fill();
+      });
+      ctx.beginPath(); ctx.ellipse(cx, cy, r*0.09, r*0.60, 0, 0, Math.PI*2); ctx.fill();
+    } else if(objType === 'heart'){
+      const lR = r*0.58, topY = cy - r*0.20;
+      ctx.beginPath();
+      ctx.arc(cx - lR, topY, lR, Math.PI, 0, false);
+      ctx.arc(cx + lR, topY, lR, Math.PI, 0, false);
+      ctx.bezierCurveTo(cx + lR*2.2, cy + r*0.38, cx + r*0.38, cy + r, cx, cy + r);
+      ctx.bezierCurveTo(cx - r*0.38, cy + r, cx - lR*2.2, cy + r*0.38, cx - lR*2, topY);
+      ctx.closePath(); ctx.fill();
+    } else if(objType === 'balloon'){
+      ctx.beginPath(); ctx.ellipse(cx, cy-r*0.08, r*0.75, r*0.92, 0, 0, Math.PI*2); ctx.fill();
+    } else if(objType === 'fish'){
+      ctx.beginPath(); ctx.ellipse(cx-r*0.08, cy, r*0.75, r*0.50, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx+r*0.68, cy);
+      ctx.lineTo(cx+r*1.28, cy-r*0.50);
+      ctx.lineTo(cx+r*1.28, cy+r*0.50);
+      ctx.closePath(); ctx.fill();
+    }
+    return;
+  }
   if(objType==='ball')           drawLatBall(ctx, cx, cy, r);
   else if(objType==='star')      drawLatStar(ctx, cx, cy, r);
   else if(objType==='bear')      drawLatBear(ctx, cx, cy, r);
@@ -3513,21 +3566,21 @@ function drawLatObjectAt(ctx, objType, cx, cy, r){
   else if(objType==='fish')      drawLatFish(ctx, cx, cy, r);
 }
 
-function makeLateralEyeCanvas(objType, targetIdx, dispOffset){
+function makeLateralEyeCanvas(objType, targetIdx, dispOffset, style){
   const c = document.createElement('canvas');
   c.width = SW; c.height = SH;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, SW, SH);
   const r = Math.min(SW, SH) * 0.13;
-  ctx.font = `bold ${Math.round(r * 0.48)}px Arial`;
-  ctx.fillStyle = '#cccccc'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold ${Math.round(r * 0.52)}px Arial`;
+  ctx.fillStyle = '#bbbbbb'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   LAT_POSITIONS.forEach((pos, i) => {
     ctx.fillText(String(i + 1), SW * pos.x, SH * pos.y - r * 1.55);
   });
   LAT_POSITIONS.forEach((pos, i) => {
     const cx = SW * pos.x + (i === targetIdx ? dispOffset : 0);
     const cy = SH * pos.y;
-    drawLatObjectAt(ctx, objType, cx, cy, r);
+    drawLatObjectAt(ctx, objType, cx, cy, r, style);
   });
   return c;
 }
@@ -3538,13 +3591,14 @@ function renderLateralDisparity(){
   const level   = STEREO_LEVELS.find(l => l.arcsec === arcsec) || STEREO_LEVELS[0];
   const mode    = stereoModeSel.value;
   const objType = stereoObjectSel.value;
+  const style   = stereoStyleSel ? stereoStyleSel.value : 'flat';
   stereoDisparityLbl.innerHTML = `${level.label} · ${dispPx.toFixed(1)} px disparidade`;
   document.getElementById('stereo-fs-label').textContent = `${level.label} · ${dispPx.toFixed(1)}px`;
   const targetEl = document.getElementById('stereo-target-pos');
-  if(targetEl) targetEl.textContent = `Alvo: ${LAT_POSITIONS[stereoLateralTarget].name}`;
+  if(targetEl) targetEl.textContent = `Alvo: ${LAT_POSITIONS[stereoLateralTarget].name} · ${level.label}`;
   const half = dispPx / 2;
-  const rightC = makeLateralEyeCanvas(objType, stereoLateralTarget, -half);
-  const leftC  = makeLateralEyeCanvas(objType, stereoLateralTarget, +half);
+  const rightC = makeLateralEyeCanvas(objType, stereoLateralTarget, -half, style);
+  const leftC  = makeLateralEyeCanvas(objType, stereoLateralTarget, +half, style);
   const wrap = document.getElementById('stereo-canvas-wrap');
   wrap.classList.toggle('sbs-active', mode === 'sbs');
   sctx.clearRect(0, 0, SW, SH);
@@ -3552,7 +3606,7 @@ function renderLateralDisparity(){
     sctx.fillStyle = '#ffffff'; sctx.fillRect(0, 0, SW, SH);
     const r = Math.min(SW, SH) * 0.13;
     LAT_POSITIONS.forEach(pos => {
-      drawLatObjectAt(sctx, objType, SW * pos.x, SH * pos.y, r);
+      drawLatObjectAt(sctx, objType, SW * pos.x, SH * pos.y, r, style);
     });
   } else if(mode === 'sbs'){
     sctx.drawImage(rightC, 0, 0, SW, SH, 0, 0, SW/2, SH);
@@ -3630,9 +3684,17 @@ function updateStereoResults(){
   document.getElementById('stereo-clear-btn').addEventListener('click', ()=>{ stereoResults=[]; updateStereoResults(); });
 }
 
+function randomizeLateralLevel(){
+  const idx = Math.floor(Math.random() * STEREO_LEVELS.length);
+  stereoLevelSel.value = STEREO_LEVELS[idx].arcsec;
+}
+
 document.getElementById('stereo-regenerate').addEventListener('click', ()=>{
   stereoCurrentLeftGrid = null;
-  if(stereoTypeSel.value === 'lateral') stereoLateralTarget = Math.floor(Math.random() * 4);
+  if(stereoTypeSel.value === 'lateral'){
+    stereoLateralTarget = Math.floor(Math.random() * 4);
+    randomizeLateralLevel();
+  }
   renderStereo();
 });
 document.getElementById('stereo-pass').addEventListener('click', ()=> recordStereoResult(true));
@@ -3641,7 +3703,10 @@ document.getElementById('stereo-level-prev').addEventListener('click', ()=> ster
 document.getElementById('stereo-level-next').addEventListener('click', ()=> stereoGoLevel(+1));
 document.getElementById('stereo-fs-regenerate').addEventListener('click', ()=>{
   stereoCurrentLeftGrid = null;
-  if(stereoTypeSel.value === 'lateral') stereoLateralTarget = Math.floor(Math.random() * 4);
+  if(stereoTypeSel.value === 'lateral'){
+    stereoLateralTarget = Math.floor(Math.random() * 4);
+    randomizeLateralLevel();
+  }
   renderStereo();
 });
 document.getElementById('stereo-fs-pass').addEventListener('click', ()=> recordStereoResult(true));
@@ -3650,12 +3715,22 @@ document.getElementById('stereo-fs-prev').addEventListener('click', ()=> stereoG
 document.getElementById('stereo-fs-next').addEventListener('click', ()=> stereoGoLevel(+1));
 stereoTypeSel.addEventListener('change', ()=>{
   const isRDS = stereoTypeSel.value === 'rds';
+  const isLat = stereoTypeSel.value === 'lateral';
   document.getElementById('stereo-shape-group').style.display  = isRDS ? '' : 'none';
   document.getElementById('stereo-dot-group').style.display    = isRDS ? '' : 'none';
   document.getElementById('stereo-object-group').style.display = isRDS ? 'none' : '';
+  const styleGrp = document.getElementById('stereo-style-group');
+  if(styleGrp) styleGrp.style.display = isLat ? '' : 'none';
+  const tapHint = document.getElementById('stereo-tap-hint');
+  if(tapHint) tapHint.style.display = isLat ? '' : 'none';
   const tgtEl = document.getElementById('stereo-target-pos');
   if(tgtEl) tgtEl.style.display = isRDS ? 'none' : '';
-  if(!isRDS) stereoLateralTarget = Math.floor(Math.random() * 4);
+  document.getElementById('stereo-pass').style.display = isRDS ? '' : 'none';
+  document.getElementById('stereo-fail').style.display = isRDS ? '' : 'none';
+  if(isLat){
+    stereoLateralTarget = Math.floor(Math.random() * 4);
+    randomizeLateralLevel();
+  }
   stereoCurrentLeftGrid = null;
   renderStereo();
 });
@@ -3667,6 +3742,33 @@ stereoObjectSel.addEventListener('change', ()=>{
 });
 stereoLevelSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
 stereoDotSizeSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
+if(stereoStyleSel) stereoStyleSel.addEventListener('change', ()=>{ renderStereo(); });
+
+// Tap-to-record: clinician taps the position the patient identified
+stereoCanvas.addEventListener('click', function(e){
+  if(stereoTypeSel.value !== 'lateral') return;
+  const rect = stereoCanvas.getBoundingClientRect();
+  const scaleX = SW / rect.width;
+  const scaleY = SH / rect.height;
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top)  * scaleY;
+  let minDist = Infinity, nearest = 0;
+  LAT_POSITIONS.forEach((pos, i)=>{
+    const dx = cx - SW * pos.x, dy = cy - SH * pos.y;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if(d < minDist){ minDist = d; nearest = i; }
+  });
+  const r = Math.min(SW, SH) * 0.13;
+  if(minDist > r * 2.5) return;
+  const correct = (nearest === stereoLateralTarget);
+  recordStereoResult(correct);
+  const tgt = document.getElementById('stereo-target-pos');
+  if(tgt){
+    tgt.textContent = correct ? '✓ Correto!' : '✗ Errado';
+    tgt.style.color = correct ? '#43a047' : '#e53935';
+    setTimeout(()=>{ tgt.style.color = ''; renderStereo(); }, 1200);
+  }
+});
 document.getElementById('stereo-fullscreen').addEventListener('click', ()=>{
   enterFullscreen(document.getElementById('stereo-canvas-wrap'));
 });
@@ -3725,6 +3827,24 @@ document.addEventListener('keydown', (e)=>{
   const key = (e.key || '').toLowerCase();
   if(key === 'c'){
     toggleControlsOverlay();
+    return;
+  }
+  const stereoTab = !document.getElementById('tab-stereo').classList.contains('hidden');
+  if(stereoTab){
+    if(key === 'p'){ recordStereoResult(true);  return; }
+    if(key === 'n'){ recordStereoResult(false); return; }
+    if(key === ' ' || key === 'r'){
+      e.preventDefault();
+      stereoCurrentLeftGrid = null;
+      if(stereoTypeSel.value === 'lateral'){
+        stereoLateralTarget = Math.floor(Math.random() * 4);
+        randomizeLateralLevel();
+      }
+      renderStereo();
+      return;
+    }
+    if(key === 'arrowleft')  { stereoGoLevel(-1); return; }
+    if(key === 'arrowright') { stereoGoLevel(+1); return; }
   }
 });
 
