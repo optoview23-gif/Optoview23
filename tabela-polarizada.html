@@ -130,7 +130,8 @@
   .fs-overlay span{font-size:12px; color:#ccc; min-width:140px; text-align:center;}
   :fullscreen #acuidade-canvas-wrap,
   :fullscreen #etdrs-canvas-wrap,
-  :fullscreen #vect-canvas-wrap{
+  :fullscreen #vect-canvas-wrap,
+  :fullscreen #stereo-canvas-wrap{
     width:100vw; height:100vh; border-radius:0;
   }
   :fullscreen canvas{
@@ -173,6 +174,17 @@
   .dot-center{background:#111;}
   .dot-od{background:#cc2200;}
   .dot-oe{background:#009922;}
+
+  /* --- ESTEREOPSIA / RDS --- */
+  #stereo-canvas-wrap{
+    position:relative;
+    background:#fff;
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    padding:0;
+    overflow:hidden;
+  }
+  #stereo-canvas{display:block;}
 </style>
 </head>
 <body>
@@ -182,6 +194,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="etdrs">ETDRS Dissociada</button>
     <button class="tab-btn" data-tab="vectogram">Vetograma de Corda</button>
+    <button class="tab-btn" data-tab="stereo">Estereopsia</button>
   </div>
 </div>
 
@@ -439,6 +452,100 @@
     </div>
   </div>
 
+
+  <!-- ================= ESTEREOPSIA (Random Dot Stereogram) ================= -->
+  <div id="tab-stereo" class="panel hidden">
+    <div class="controls">
+      <label>Formato de exibição
+        <select id="stereo-mode">
+          <option value="sbs">Side by Side (TV 3D passiva)</option>
+          <option value="interlace">Entrelaçado (monitor 3D passivo)</option>
+          <option value="flat">Plano (referência — sem dissociação)</option>
+        </select>
+      </label>
+      <label>Figura do alvo
+        <select id="stereo-shape">
+          <optgroup label="Geométricas">
+            <option value="circle">Círculo</option>
+            <option value="square">Quadrado</option>
+            <option value="triangle">Triângulo</option>
+            <option value="diamond">Losango</option>
+            <option value="cross">Cruz (+)</option>
+            <option value="star">Estrela</option>
+            <option value="heart">Coração</option>
+          </optgroup>
+          <optgroup label="Letras (adultos / alfabetizados)">
+            <option value="A">A</option>
+            <option value="E">E</option>
+            <option value="O">O</option>
+            <option value="T">T</option>
+            <option value="L">L</option>
+            <option value="U">U</option>
+          </optgroup>
+          <optgroup label="Números">
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="8">8</option>
+          </optgroup>
+        </select>
+      </label>
+      <label>Nível de disparidade
+        <select id="stereo-level">
+          <option value="800">800″ — triagem inicial</option>
+          <option value="400">400″</option>
+          <option value="200">200″</option>
+          <option value="100">100″</option>
+          <option value="60">60″</option>
+          <option value="40">40″ — normal</option>
+          <option value="20">20″ — excelente</option>
+        </select>
+      </label>
+      <label>Tamanho do ponto
+        <select id="stereo-dot-size">
+          <option value="2">Fino (2px)</option>
+          <option value="3" selected>Médio (3px)</option>
+          <option value="4">Grosso (4px)</option>
+          <option value="6">Extra-grosso (6px)</option>
+        </select>
+      </label>
+      <button class="primary" id="stereo-regenerate">Nova imagem</button>
+      <button class="fs-btn" id="stereo-fullscreen">⛶ Tela cheia</button>
+    </div>
+
+    <div class="controls" style="justify-content:center; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span id="stereo-disparity-label" style="font-size:12px; color:var(--muted); min-width:220px;"></span>
+      <button class="secondary" id="stereo-level-prev">◀ Nível anterior</button>
+      <button class="secondary" id="stereo-level-next">Próximo nível ▶</button>
+      <button class="secondary" id="stereo-pass" style="border-color:#43a047; color:#43a047;">✓ Percebeu</button>
+      <button class="secondary" id="stereo-fail" style="border-color:#e53935; color:#e53935;">✗ Não percebeu</button>
+    </div>
+
+    <div id="stereo-canvas-wrap">
+      <canvas id="stereo-canvas" width="1920" height="1080"></canvas>
+      <div class="fs-overlay">
+        <button id="stereo-fs-prev">◀</button>
+        <button id="stereo-fs-regenerate">Nova imagem</button>
+        <span id="stereo-fs-label" style="font-size:12px; color:#ccc; min-width:160px; text-align:center;"></span>
+        <button id="stereo-fs-next">▶</button>
+        <button id="stereo-fs-pass" style="background:#43a047;">✓ Percebeu</button>
+        <button id="stereo-fs-fail" style="background:#e53935;">✗ Não percebeu</button>
+        <button class="fs-exit" id="stereo-fs-exit">Sair ✕</button>
+      </div>
+    </div>
+
+    <div id="stereo-results" style="margin-top:14px;"></div>
+
+    <div class="note">
+      <strong>Teste de Estereopsia por Ponto Aleatório (Random Dot Stereogram — RDS)</strong> — sem pistas monoculares: o alvo só é visível quando os dois olhos fundem as imagens com disparidade binocular. Cada par é gerado de forma completamente aleatória; use <em>Nova imagem</em> para gerar um novo padrão no mesmo nível sem mudar a dificuldade.
+      <br><br>
+      <strong>Procedimento:</strong> coloque os óculos polarizados no paciente e peça que olhe para o padrão de pontos. Pergunte se percebe alguma figura "saindo" ou "flutuando" sobre o fundo. Comece pelo 800″ e avance para níveis menores (mais difíceis). O <em>limiar</em> é o menor nível em que o paciente identifica corretamente. Valores normais: ≤ 40 arcsec.
+      <br><br>
+      <strong>Troca de forma:</strong> adapte ao paciente — formas geométricas para crianças pré-escolares ou pacientes atípicos sem reconhecimento de letras; letras para adultos ou crianças alfabetizadas; números como alternativa.
+      <br><br>
+      <strong>Nota técnica:</strong> a disparidade em pixels usa a mesma calibração (diagonal, resolução, distância) configurada na aba ETDRS. Em níveis muito finos (40–20″) com distâncias maiores que 3 m ou ponto extra-grosso (6px), a disparidade pode ser menor que 1 célula — nesse caso use ponto fino (2px) e reduza a distância de teste.
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -449,7 +556,9 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('tab-etdrs').classList.toggle('hidden', btn.dataset.tab!=='etdrs');
     document.getElementById('tab-vectogram').classList.toggle('hidden', btn.dataset.tab!=='vectogram');
+    document.getElementById('tab-stereo').classList.toggle('hidden', btn.dataset.tab!=='stereo');
     if(btn.dataset.tab === 'vectogram') renderVectogram();
+    if(btn.dataset.tab === 'stereo') renderStereo();
   });
 });
 
@@ -2466,6 +2575,325 @@ document.getElementById('vect-fs-center').addEventListener('click',()=>{vectOffs
 vectModeSel.addEventListener('change',renderVectogram);
 vectDisparitySel.addEventListener('change',renderVectogram);
 vectTypeSel.addEventListener('change',()=>{ resetVectLayouts(); renderVectogram(); });
+/* ================= ESTEREOPSIA (Random Dot Stereogram) ================= */
+const stereoCanvas   = document.getElementById('stereo-canvas');
+const sctx           = stereoCanvas.getContext('2d');
+const stereoModeSel  = document.getElementById('stereo-mode');
+const stereoShapeSel = document.getElementById('stereo-shape');
+const stereoLevelSel = document.getElementById('stereo-level');
+const stereoDotSizeSel   = document.getElementById('stereo-dot-size');
+const stereoDisparityLbl = document.getElementById('stereo-disparity-label');
+const SW = stereoCanvas.width, SH = stereoCanvas.height;
+
+const STEREO_LEVELS = [
+  {arcsec:800, label:'800″'},
+  {arcsec:400, label:'400″'},
+  {arcsec:200, label:'200″'},
+  {arcsec:100, label:'100″'},
+  {arcsec: 60, label: '60″'},
+  {arcsec: 40, label: '40″'},
+  {arcsec: 20, label: '20″'},
+];
+
+let stereoCurrentMask      = null; // pixel-level Uint8Array (W×H), 1 = inside shape
+let stereoCurrentShape     = null; // shape key that was used to build the mask
+let stereoCurrentLeftGrid  = null; // cell-level Uint8Array — left-eye base grid
+let stereoCurrentRightGrid = null; // cell-level Uint8Array — right-eye derived grid
+let stereoCurrentCols      = 0;
+let stereoCurrentRows      = 0;
+let stereoCurrentDs        = 0;   // dot size used when grids were generated
+let stereoResults          = [];  // [{arcsec, label, pass}]
+
+// Converte segundos de arco em pixels físicos na tela, usando a calibração compartilhada.
+function arcsecToPixelsStereo(arcsec){
+  const diagIn  = parseFloat(calDiagInput.value) || 42;
+  const resW    = parseFloat(calResInput.value)  || 1920;
+  const distM   = parseFloat(calDistInput.value) || 3;
+  const diagMm  = diagIn * 25.4;
+  const ratioD  = Math.sqrt(16*16 + 9*9);
+  const widthMm = diagMm * (16 / ratioD);
+  const pxPerMm = resW / widthMm;
+  const thetaRad = arcsec * Math.PI / (3600 * 180);
+  return distM * 1000 * thetaRad * pxPerMm;
+}
+
+// Desenha uma forma geométrica preenchida no contexto (para gerar a máscara).
+function drawStereoShapeFilled(ctx, shape, cx, cy, r){
+  ctx.fillStyle = '#000000';
+
+  if(shape === 'cross'){
+    const t = r * 0.30;
+    ctx.fillRect(cx - r, cy - t, r * 2, t * 2);
+    ctx.fillRect(cx - t, cy - r, t * 2, r * 2);
+    return;
+  }
+  if(shape === 'heart'){
+    // Dois círculos (lóbulos) + triângulo inferior
+    const lr = r * 0.55, lox = r * 0.45, loy = -r * 0.05;
+    ctx.beginPath(); ctx.arc(cx - lox, cy + loy, lr, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + lox, cy + loy, lr, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.90, cy + r * 0.14);
+    ctx.lineTo(cx + r * 0.90, cy + r * 0.14);
+    ctx.lineTo(cx, cy + r * 0.90);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  ctx.beginPath();
+  if(shape === 'circle'){
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+  } else if(shape === 'square'){
+    const s = r * 1.42;
+    ctx.rect(cx - s/2, cy - s/2, s, s);
+  } else if(shape === 'triangle'){
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx + r * 0.866, cy + r * 0.5);
+    ctx.lineTo(cx - r * 0.866, cy + r * 0.5);
+    ctx.closePath();
+  } else if(shape === 'diamond'){
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx + r * 0.7, cy);
+    ctx.lineTo(cx, cy + r);
+    ctx.lineTo(cx - r * 0.7, cy);
+    ctx.closePath();
+  } else if(shape === 'star'){
+    const n = 5, outer = r, inner = r * 0.40;
+    for(let i = 0; i < n*2; i++){
+      const angle = (Math.PI/n)*i - Math.PI/2;
+      const rad   = (i%2===0) ? outer : inner;
+      if(i===0) ctx.moveTo(cx + Math.cos(angle)*rad, cy + Math.sin(angle)*rad);
+      else      ctx.lineTo(cx + Math.cos(angle)*rad, cy + Math.sin(angle)*rad);
+    }
+    ctx.closePath();
+  }
+  ctx.fill();
+}
+
+// Constrói máscara em nível de pixel: 1 = dentro da forma, 0 = fundo.
+// Para formas de texto (letras/números) usa fillText; demais usam canvas primitives.
+function buildStereoMask(W, H, shape){
+  const tmp = document.createElement('canvas');
+  tmp.width = W; tmp.height = H;
+  const ctx = tmp.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const r  = Math.min(W, H) * 0.27;
+  const TEXT_SHAPES = new Set(['A','E','O','T','L','U','3','5','8']);
+
+  if(TEXT_SHAPES.has(shape)){
+    const fs = Math.min(W, H) * 0.55;
+    ctx.fillStyle = '#000000';
+    ctx.font = `900 ${fs}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(shape, cx, cy);
+  } else {
+    drawStereoShapeFilled(ctx, shape, cx, cy, r);
+  }
+
+  const data  = ctx.getImageData(0, 0, W, H).data;
+  const mask  = new Uint8Array(W * H);
+  for(let i = 0; i < W*H; i++) mask[i] = data[i*4] < 128 ? 1 : 0;
+  return mask;
+}
+
+// Gera o par de grids celulares (base = olho esquerdo, derivado = olho direito).
+// Disparidade cruzada: alvo parece estar NA FRENTE da tela.
+// No RDS cruzado, o olho direito vê o alvo deslocado para a ESQUERDA em relação ao esquerdo.
+// Isso é codificado como: right[row][col] = base[row][col + d]  (o OD "busca" d células à direita no base para encontrar a correlação).
+function generateRDS(){
+  const shape  = stereoShapeSel.value;
+  const ds     = parseInt(stereoDotSizeSel.value) || 3;
+  const arcsec = parseInt(stereoLevelSel.value);
+  const disparityPx = arcsecToPixelsStereo(arcsec);
+  const level = STEREO_LEVELS.find(l => l.arcsec === arcsec) || STEREO_LEVELS[0];
+
+  if(stereoCurrentShape !== shape){
+    stereoCurrentShape = shape;
+    stereoCurrentMask  = buildStereoMask(SW, SH, shape);
+  }
+
+  const cols = Math.ceil(SW / ds);
+  const rows = Math.ceil(SH / ds);
+  const d    = Math.max(1, Math.round(disparityPx / ds));
+  stereoCurrentCols = cols;
+  stereoCurrentRows = rows;
+  stereoCurrentDs   = ds;
+
+  const base = new Uint8Array(cols * rows);
+  for(let i = 0; i < base.length; i++) base[i] = Math.random() < 0.5 ? 1 : 0;
+
+  const pool = new Uint8Array(cols * rows);
+  for(let i = 0; i < pool.length; i++) pool[i] = Math.random() < 0.5 ? 1 : 0;
+
+  const right = base.slice();
+  for(let row = 0; row < rows; row++){
+    for(let col = 0; col < cols; col++){
+      const px = Math.min(col*ds + (ds>>1), SW-1);
+      const py = Math.min(row*ds + (ds>>1), SH-1);
+      if(!stereoCurrentMask[py*SW + px]) continue;
+      const srcCol = col + d;
+      right[row*cols + col] = srcCol < cols ? base[row*cols + srcCol] : pool[row*cols + col];
+    }
+  }
+
+  stereoCurrentLeftGrid  = base;
+  stereoCurrentRightGrid = right;
+
+  const warning = disparityPx < ds ? ' ⚠ <1 célula — use ponto menor' : '';
+  const labelText = `${level.label} · ${disparityPx.toFixed(1)} px disparidade${warning}`;
+  stereoDisparityLbl.innerHTML = labelText;
+  document.getElementById('stereo-fs-label').textContent = `${level.label} · ${disparityPx.toFixed(1)}px`;
+}
+
+// Converte grid celular → canvas usando ImageData (rápido, sem múltiplas chamadas de fillRect).
+function gridToCanvas(grid, cols, rows, ds){
+  const c   = document.createElement('canvas');
+  c.width   = SW; c.height = SH;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(SW, SH);
+  const dat = img.data;
+
+  // Preenche tudo branco
+  for(let i = 0; i < dat.length; i += 4){
+    dat[i] = dat[i+1] = dat[i+2] = 255; dat[i+3] = 255;
+  }
+  // Pinta células pretas
+  for(let row = 0; row < rows; row++){
+    for(let col = 0; col < cols; col++){
+      if(!grid[row*cols + col]) continue;
+      const x0 = col*ds, y0 = row*ds;
+      const x1 = Math.min(x0+ds, SW), y1 = Math.min(y0+ds, SH);
+      for(let y = y0; y < y1; y++){
+        const base = y*SW;
+        for(let x = x0; x < x1; x++){
+          const k = (base+x)*4;
+          dat[k] = dat[k+1] = dat[k+2] = 0;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+function renderStereo(){
+  if(!stereoCurrentLeftGrid) generateRDS();
+
+  const mode = stereoModeSel.value;
+  const ds   = stereoCurrentDs;
+  const leftC  = gridToCanvas(stereoCurrentLeftGrid,  stereoCurrentCols, stereoCurrentRows, ds);
+  const rightC = gridToCanvas(stereoCurrentRightGrid, stereoCurrentCols, stereoCurrentRows, ds);
+
+  const wrap = document.getElementById('stereo-canvas-wrap');
+  wrap.classList.toggle('sbs-active', mode === 'sbs');
+
+  sctx.clearRect(0, 0, SW, SH);
+
+  if(mode === 'flat'){
+    // Modo de referência: exibe somente o olho esquerdo (base, sem pistas estereoscópicas)
+    sctx.drawImage(leftC, 0, 0);
+  } else if(mode === 'sbs'){
+    // Convenção Thomson: metade esquerda da tela → olho direito (OD); direita → olho esquerdo (OE)
+    sctx.drawImage(rightC, 0, 0, SW, SH, 0,                      0,                   SW/2, SH);
+    sctx.drawImage(leftC,  0, 0, SW, SH, SW/2 + sbsHorizontalOffset, sbsVerticalOffset, SW/2, SH);
+  } else {
+    // Entrelaçado: linhas pares → olho direito (OD); ímpares → olho esquerdo (OE)
+    const ld  = leftC.getContext('2d').getImageData(0, 0, SW, SH);
+    const rd  = rightC.getContext('2d').getImageData(0, 0, SW, SH);
+    const out = sctx.createImageData(SW, SH);
+    for(let y = 0; y < SH; y++){
+      const src = (y%2===0) ? rd : ld;
+      const rs  = y*SW*4;
+      for(let x = 0; x < SW*4; x++) out.data[rs+x] = src.data[rs+x];
+    }
+    sctx.putImageData(out, 0, 0);
+  }
+}
+
+function stereoGoLevel(delta){
+  const cur  = parseInt(stereoLevelSel.value);
+  const idx  = STEREO_LEVELS.findIndex(l => l.arcsec === cur);
+  const next = idx + delta;
+  if(next < 0 || next >= STEREO_LEVELS.length) return;
+  stereoLevelSel.value = STEREO_LEVELS[next].arcsec;
+  generateRDS();
+  renderStereo();
+}
+
+function recordStereoResult(pass){
+  const arcsec = parseInt(stereoLevelSel.value);
+  const level  = STEREO_LEVELS.find(l => l.arcsec === arcsec);
+  if(!level) return;
+  stereoResults = stereoResults.filter(r => r.arcsec !== arcsec);
+  stereoResults.push({arcsec: level.arcsec, label: level.label, pass});
+  stereoResults.sort((a,b) => b.arcsec - a.arcsec);
+  updateStereoResults();
+  // Após um acerto, avança automaticamente para o próximo nível mais difícil
+  if(pass) stereoGoLevel(+1);
+}
+
+function updateStereoResults(){
+  const div = document.getElementById('stereo-results');
+  if(stereoResults.length === 0){ div.innerHTML = ''; return; }
+
+  let html = '<table style="border-collapse:collapse; font-size:12px;">'
+    + '<tr><th style="padding:4px 14px 4px 0; text-align:left; color:var(--muted); font-weight:500;">Nível</th>'
+    + '<th style="padding:4px 0; text-align:left; color:var(--muted); font-weight:500;">Resultado</th></tr>';
+
+  stereoResults.forEach(r=>{
+    const color = r.pass ? '#43a047' : '#e53935';
+    const icon  = r.pass ? '✓ Percebeu' : '✗ Não percebeu';
+    html += `<tr>
+      <td style="padding:4px 14px 4px 0; border-top:1px solid var(--line);">${r.label}</td>
+      <td style="padding:4px 0; border-top:1px solid var(--line); color:${color}; font-weight:600;">${icon}</td>
+    </tr>`;
+  });
+
+  const passes = stereoResults.filter(r => r.pass);
+  if(passes.length > 0){
+    const threshold = passes.reduce((a,b) => a.arcsec < b.arcsec ? a : b);
+    const isNormal = threshold.arcsec <= 40;
+    const statusHtml = isNormal
+      ? `<span style="color:#43a047;">dentro do normal (≤ 40″)</span>`
+      : `<span style="color:var(--warn);">acima do normal (> 40″)</span>`;
+    html += `<tr><td colspan="2" style="padding:8px 0 4px; border-top:1px solid var(--line); font-size:11px; color:var(--muted);">
+      Limiar: <strong style="color:var(--text);">${threshold.label}</strong> — ${statusHtml}
+    </td></tr>`;
+  }
+
+  html += '</table><button class="secondary" id="stereo-clear-btn" style="font-size:11px; padding:5px 10px; margin-top:8px;">Limpar resultados</button>';
+  div.innerHTML = html;
+  document.getElementById('stereo-clear-btn').addEventListener('click', ()=>{ stereoResults=[]; updateStereoResults(); });
+}
+
+// Listeners da aba de estereopsia
+document.getElementById('stereo-regenerate').addEventListener('click', ()=>{ generateRDS(); renderStereo(); });
+document.getElementById('stereo-pass').addEventListener('click', ()=> recordStereoResult(true));
+document.getElementById('stereo-fail').addEventListener('click', ()=> recordStereoResult(false));
+document.getElementById('stereo-level-prev').addEventListener('click', ()=> stereoGoLevel(-1));
+document.getElementById('stereo-level-next').addEventListener('click', ()=> stereoGoLevel(+1));
+
+document.getElementById('stereo-fs-regenerate').addEventListener('click', ()=>{ generateRDS(); renderStereo(); });
+document.getElementById('stereo-fs-pass').addEventListener('click', ()=> recordStereoResult(true));
+document.getElementById('stereo-fs-fail').addEventListener('click', ()=> recordStereoResult(false));
+document.getElementById('stereo-fs-prev').addEventListener('click', ()=> stereoGoLevel(-1));
+document.getElementById('stereo-fs-next').addEventListener('click', ()=> stereoGoLevel(+1));
+
+stereoModeSel.addEventListener('change', renderStereo);
+stereoShapeSel.addEventListener('change', ()=>{ stereoCurrentShape=null; stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
+stereoLevelSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
+stereoDotSizeSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
+
+document.getElementById('stereo-fullscreen').addEventListener('click', ()=>{
+  enterFullscreen(document.getElementById('stereo-canvas-wrap'));
+});
+document.getElementById('stereo-fs-exit').addEventListener('click', exitFullscreen);
+
 /* ================= FULLSCREEN (todas as abas) ================= */
 function enterFullscreen(el){
   if(el.requestFullscreen) el.requestFullscreen();
@@ -2501,6 +2929,7 @@ document.getElementById('vect-fs-exit').addEventListener('click', exitFullscreen
 document.addEventListener('fullscreenchange', ()=>{
   renderEtdrs();
   renderVectogram();
+  if(stereoCurrentLeftGrid) renderStereo();
 });
 
 // --- Esconder/mostrar barra de controles em tela cheia ---
