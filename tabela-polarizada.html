@@ -531,6 +531,7 @@
 
     <div class="controls" style="justify-content:center; gap:10px; align-items:center; flex-wrap:wrap;">
       <span id="stereo-disparity-label" style="font-size:12px; color:var(--muted); min-width:220px;"></span>
+      <span id="stereo-target-pos" style="display:none; font-size:12px; background:#fffde7; color:#e65100; padding:4px 12px; border-radius:4px; font-weight:700; border:1px solid #ffb300;"></span>
       <button class="secondary" id="stereo-level-prev">◀ Nível anterior</button>
       <button class="secondary" id="stereo-level-next">Próximo nível ▶</button>
       <button class="secondary" id="stereo-pass" style="border-color:#43a047; color:#43a047;">✓ Percebeu</button>
@@ -2622,6 +2623,14 @@ let stereoCurrentCols      = 0;
 let stereoCurrentRows      = 0;
 let stereoCurrentDs        = 0;
 let stereoResults          = [];
+let stereoLateralTarget    = 0; // índice 0-3 do objeto com disparidade
+
+const LAT_POSITIONS = [
+  {x: 0.25, y: 0.33, name: 'superior esquerdo (1)'},
+  {x: 0.75, y: 0.33, name: 'superior direito (2)'},
+  {x: 0.25, y: 0.67, name: 'inferior esquerdo (3)'},
+  {x: 0.75, y: 0.67, name: 'inferior direito (4)'},
+];
 
 function arcsecToPixelsStereo(arcsec){
   const diagIn  = parseFloat(calDiagInput.value) || 42;
@@ -2923,12 +2932,9 @@ function drawLatFish(ctx, cx, cy, r){
   ctx.closePath(); ctx.fillStyle = '#e65100'; ctx.fill();
 }
 
-function drawLateralObject(ctx, W, H, objType, offsetX){
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, W, H);
-  const cx = W/2 + offsetX, cy = H/2;
-  const r  = Math.min(W, H) * 0.18;
-  if(objType==='ball')      drawLatBall(ctx, cx, cy, r);
+// Despacha para o drawer correto sem limpar o fundo (usado em grade multi-objeto)
+function drawLatObjectAt(ctx, objType, cx, cy, r){
+  if(objType==='ball')           drawLatBall(ctx, cx, cy, r);
   else if(objType==='star')      drawLatStar(ctx, cx, cy, r);
   else if(objType==='bear')      drawLatBear(ctx, cx, cy, r);
   else if(objType==='butterfly') drawLatButterfly(ctx, cx, cy, r);
@@ -2937,27 +2943,61 @@ function drawLateralObject(ctx, W, H, objType, offsetX){
   else if(objType==='fish')      drawLatFish(ctx, cx, cy, r);
 }
 
+// Gera o canvas de um olho: 4 objetos em grade 2×2, apenas o alvo com deslocamento lateral.
+function makeLateralEyeCanvas(objType, targetIdx, dispOffset){
+  const c = document.createElement('canvas');
+  c.width = SW; c.height = SH;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, SW, SH);
+  const r = Math.min(SW, SH) * 0.13;
+  // Numeração sutil (visível monocularmente — sem disparidade — para o paciente indicar qual objeto)
+  ctx.font = `bold ${Math.round(r * 0.48)}px Arial`;
+  ctx.fillStyle = '#cccccc';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  LAT_POSITIONS.forEach((pos, i) => {
+    // Número na posição fixa (sem deslocamento), acima do objeto
+    ctx.fillText(String(i + 1), SW * pos.x, SH * pos.y - r * 1.55);
+  });
+  LAT_POSITIONS.forEach((pos, i) => {
+    const cx = SW * pos.x + (i === targetIdx ? dispOffset : 0);
+    const cy = SH * pos.y;
+    drawLatObjectAt(ctx, objType, cx, cy, r);
+  });
+  return c;
+}
+
 function renderLateralDisparity(){
   const arcsec  = parseInt(stereoLevelSel.value);
   const dispPx  = arcsecToPixelsStereo(arcsec);
   const level   = STEREO_LEVELS.find(l => l.arcsec === arcsec) || STEREO_LEVELS[0];
   const mode    = stereoModeSel.value;
   const objType = stereoObjectSel.value;
+
   stereoDisparityLbl.innerHTML = `${level.label} · ${dispPx.toFixed(1)} px disparidade`;
   document.getElementById('stereo-fs-label').textContent = `${level.label} · ${dispPx.toFixed(1)}px`;
-  // Disparidade cruzada: OD vê objeto à esquerda (-), OE à direita (+) → objeto "flutua" na frente.
+
+  const targetEl = document.getElementById('stereo-target-pos');
+  if(targetEl) targetEl.textContent = `Alvo: ${LAT_POSITIONS[stereoLateralTarget].name}`;
+
+  // Disparidade cruzada: OD deslocado à esquerda, OE à direita → objeto "flutua" na frente.
   const half = dispPx / 2;
-  const rightC = document.createElement('canvas');
-  rightC.width = SW; rightC.height = SH;
-  drawLateralObject(rightC.getContext('2d'), SW, SH, objType, -half);
-  const leftC = document.createElement('canvas');
-  leftC.width = SW; leftC.height = SH;
-  drawLateralObject(leftC.getContext('2d'), SW, SH, objType, +half);
+  const rightC = makeLateralEyeCanvas(objType, stereoLateralTarget, -half);
+  const leftC  = makeLateralEyeCanvas(objType, stereoLateralTarget, +half);
+
   const wrap = document.getElementById('stereo-canvas-wrap');
   wrap.classList.toggle('sbs-active', mode === 'sbs');
   sctx.clearRect(0, 0, SW, SH);
+
   if(mode === 'flat'){
-    drawLateralObject(sctx, SW, SH, objType, 0);
+    // Referência: mostra os 4 objetos sem disparidade
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(0, 0, SW, SH);
+    const r = Math.min(SW, SH) * 0.13;
+    LAT_POSITIONS.forEach((pos, i) => {
+      drawLatObjectAt(sctx, objType, SW * pos.x, SH * pos.y, r);
+    });
   } else if(mode === 'sbs'){
     sctx.drawImage(rightC, 0, 0, SW, SH, 0, 0, SW/2, SH);
     sctx.drawImage(leftC,  0, 0, SW, SH, SW/2 + sbsHorizontalOffset, sbsVerticalOffset, SW/2, SH);
@@ -3035,13 +3075,21 @@ function updateStereoResults(){
 }
 
 // Listeners da aba de estereopsia
-document.getElementById('stereo-regenerate').addEventListener('click', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
+document.getElementById('stereo-regenerate').addEventListener('click', ()=>{
+  stereoCurrentLeftGrid = null;
+  if(stereoTypeSel.value === 'lateral') stereoLateralTarget = Math.floor(Math.random() * 4);
+  renderStereo();
+});
 document.getElementById('stereo-pass').addEventListener('click', ()=> recordStereoResult(true));
 document.getElementById('stereo-fail').addEventListener('click', ()=> recordStereoResult(false));
 document.getElementById('stereo-level-prev').addEventListener('click', ()=> stereoGoLevel(-1));
 document.getElementById('stereo-level-next').addEventListener('click', ()=> stereoGoLevel(+1));
 
-document.getElementById('stereo-fs-regenerate').addEventListener('click', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
+document.getElementById('stereo-fs-regenerate').addEventListener('click', ()=>{
+  stereoCurrentLeftGrid = null;
+  if(stereoTypeSel.value === 'lateral') stereoLateralTarget = Math.floor(Math.random() * 4);
+  renderStereo();
+});
 document.getElementById('stereo-fs-pass').addEventListener('click', ()=> recordStereoResult(true));
 document.getElementById('stereo-fs-fail').addEventListener('click', ()=> recordStereoResult(false));
 document.getElementById('stereo-fs-prev').addEventListener('click', ()=> stereoGoLevel(-1));
@@ -3052,12 +3100,18 @@ stereoTypeSel.addEventListener('change', ()=>{
   document.getElementById('stereo-shape-group').style.display  = isRDS ? '' : 'none';
   document.getElementById('stereo-dot-group').style.display    = isRDS ? '' : 'none';
   document.getElementById('stereo-object-group').style.display = isRDS ? 'none' : '';
+  const tgtEl = document.getElementById('stereo-target-pos');
+  if(tgtEl) tgtEl.style.display = isRDS ? 'none' : '';
+  if(!isRDS) stereoLateralTarget = Math.floor(Math.random() * 4);
   stereoCurrentLeftGrid = null;
   renderStereo();
 });
 stereoModeSel.addEventListener('change', renderStereo);
 stereoShapeSel.addEventListener('change', ()=>{ stereoCurrentShape=null; stereoCurrentLeftGrid=null; renderStereo(); });
-stereoObjectSel.addEventListener('change', renderStereo);
+stereoObjectSel.addEventListener('change', ()=>{
+  if(stereoTypeSel.value === 'lateral') stereoLateralTarget = Math.floor(Math.random() * 4);
+  renderStereo();
+});
 stereoLevelSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
 stereoDotSizeSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
 
