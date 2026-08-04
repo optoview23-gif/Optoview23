@@ -740,6 +740,12 @@ if(localStorage.getItem('optoview_auth') === '1'){
   <!-- ================= ESTEREOPSIA (Random Dot Stereogram) ================= -->
   <div id="tab-stereo" class="panel hidden">
     <div class="controls">
+      <label>Tipo de teste
+        <select id="stereo-type">
+          <option value="rds">Pontos Aleatórios (RDS)</option>
+          <option value="lateral">Disparidade Lateral (objetos visíveis)</option>
+        </select>
+      </label>
       <label>Formato de exibição
         <select id="stereo-mode">
           <option value="sbs">Side by Side (TV 3D passiva)</option>
@@ -747,7 +753,7 @@ if(localStorage.getItem('optoview_auth') === '1'){
           <option value="flat">Plano (referência — sem dissociação)</option>
         </select>
       </label>
-      <label>Figura do alvo
+      <label id="stereo-shape-group">Figura do alvo (RDS)
         <select id="stereo-shape">
           <optgroup label="Geométricas">
             <option value="circle">Círculo</option>
@@ -773,6 +779,17 @@ if(localStorage.getItem('optoview_auth') === '1'){
           </optgroup>
         </select>
       </label>
+      <label id="stereo-object-group" style="display:none">Objeto (Disp. Lateral)
+        <select id="stereo-object">
+          <option value="ball">Bola</option>
+          <option value="star">Estrela</option>
+          <option value="bear">Ursinho</option>
+          <option value="butterfly">Borboleta</option>
+          <option value="heart">Coração</option>
+          <option value="balloon">Balão</option>
+          <option value="fish">Peixinho</option>
+        </select>
+      </label>
       <label>Nível de disparidade
         <select id="stereo-level">
           <option value="800">800″ — triagem inicial</option>
@@ -784,7 +801,7 @@ if(localStorage.getItem('optoview_auth') === '1'){
           <option value="20">20″ — excelente</option>
         </select>
       </label>
-      <label>Tamanho do ponto
+      <label id="stereo-dot-group">Tamanho do ponto (RDS)
         <select id="stereo-dot-size">
           <option value="2">Fino (2px)</option>
           <option value="3" selected>Médio (3px)</option>
@@ -820,13 +837,13 @@ if(localStorage.getItem('optoview_auth') === '1'){
     <div id="stereo-results" style="margin-top:14px;"></div>
 
     <div class="note">
-      <strong>Teste de Estereopsia por Ponto Aleatório (Random Dot Stereogram — RDS)</strong> — sem pistas monoculares: o alvo só é visível quando os dois olhos fundem as imagens com disparidade binocular. Cada par é gerado de forma completamente aleatória; use <em>Nova imagem</em> para gerar um novo padrão no mesmo nível sem mudar a dificuldade.
+      <strong>Pontos Aleatórios (RDS):</strong> sem pistas monoculares — o alvo só é visível quando os dois olhos fundem as imagens com disparidade binocular. Adapte a figura ao paciente: geométricas para pré-escolares e atípicos; letras/números para alfabetizados.
       <br><br>
-      <strong>Procedimento:</strong> coloque os óculos polarizados no paciente e peça que olhe para o padrão de pontos. Pergunte se percebe alguma figura "saindo" ou "flutuando" sobre o fundo. Comece pelo 800″ e avance para níveis menores (mais difíceis). O <em>limiar</em> é o menor nível em que o paciente identifica corretamente. Valores normais: ≤ 40 arcsec.
+      <strong>Disparidade Lateral (objetos visíveis):</strong> exibe um objeto colorido (bola, estrela, ursinho…) com deslocamento horizontal diferente para cada olho. Como há pistas monoculares, é mais fácil que o RDS — ideal para triagem rápida em bebês, crianças pequenas e pacientes com dificuldade de fusão. O objeto deve parecer "flutuar" na frente da tela quando a fusão binocular está presente.
       <br><br>
-      <strong>Troca de forma:</strong> adapte ao paciente — formas geométricas para crianças pré-escolares ou pacientes atípicos sem reconhecimento de letras; letras para adultos ou crianças alfabetizadas; números como alternativa.
+      <strong>Procedimento:</strong> coloque os óculos polarizados no paciente e peça que descreva o que vê. Comece em 800″ e avance para níveis menores. O <em>limiar</em> é o menor nível percebido corretamente. Valores normais: ≤ 40 arcsec.
       <br><br>
-      <strong>Nota técnica:</strong> a disparidade em pixels usa a mesma calibração (diagonal, resolução, distância) configurada na aba ETDRS. Em níveis muito finos (40–20″) com distâncias maiores que 3 m ou ponto extra-grosso (6px), a disparidade pode ser menor que 1 célula — nesse caso use ponto fino (2px) e reduza a distância de teste.
+      <strong>Nota técnica:</strong> a disparidade usa a calibração (diagonal, resolução, distância) da aba ETDRS. No RDS, use ponto fino (2px) para níveis ≤ 40″ em telas grandes ou distâncias maiores que 3 m.
     </div>
   </div>
 
@@ -3146,11 +3163,13 @@ vectModeSel.addEventListener('change',renderVectogram);
 vectDisparitySel.addEventListener('change',renderVectogram);
 vectTypeSel.addEventListener('change',()=>{ resetVectLayouts(); renderVectogram(); });
 
-/* ================= ESTEREOPSIA (Random Dot Stereogram) ================= */
+/* ================= ESTEREOPSIA ================= */
 const stereoCanvas   = document.getElementById('stereo-canvas');
 const sctx           = stereoCanvas.getContext('2d');
+const stereoTypeSel  = document.getElementById('stereo-type');
 const stereoModeSel  = document.getElementById('stereo-mode');
 const stereoShapeSel = document.getElementById('stereo-shape');
+const stereoObjectSel= document.getElementById('stereo-object');
 const stereoLevelSel = document.getElementById('stereo-level');
 const stereoDotSizeSel   = document.getElementById('stereo-dot-size');
 const stereoDisparityLbl = document.getElementById('stereo-disparity-label');
@@ -3187,6 +3206,8 @@ function arcsecToPixelsStereo(arcsec){
   return distM * 1000 * thetaRad * pxPerMm;
 }
 
+// ---- RDS: máscara e geração de grids ----
+
 function drawStereoShapeFilled(ctx, shape, cx, cy, r){
   ctx.fillStyle = '#000000';
   if(shape === 'cross'){
@@ -3203,8 +3224,7 @@ function drawStereoShapeFilled(ctx, shape, cx, cy, r){
     ctx.moveTo(cx - r * 0.90, cy + r * 0.14);
     ctx.lineTo(cx + r * 0.90, cy + r * 0.14);
     ctx.lineTo(cx, cy + r * 0.90);
-    ctx.closePath();
-    ctx.fill();
+    ctx.closePath(); ctx.fill();
     return;
   }
   ctx.beginPath();
@@ -3219,10 +3239,8 @@ function drawStereoShapeFilled(ctx, shape, cx, cy, r){
     ctx.lineTo(cx - r * 0.866, cy + r * 0.5);
     ctx.closePath();
   } else if(shape === 'diamond'){
-    ctx.moveTo(cx, cy - r);
-    ctx.lineTo(cx + r * 0.7, cy);
-    ctx.lineTo(cx, cy + r);
-    ctx.lineTo(cx - r * 0.7, cy);
+    ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 0.7, cy);
+    ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r * 0.7, cy);
     ctx.closePath();
   } else if(shape === 'star'){
     const n = 5, outer = r, inner = r * 0.40;
@@ -3268,24 +3286,18 @@ function generateRDS(){
   const arcsec = parseInt(stereoLevelSel.value);
   const disparityPx = arcsecToPixelsStereo(arcsec);
   const level = STEREO_LEVELS.find(l => l.arcsec === arcsec) || STEREO_LEVELS[0];
-
   if(stereoCurrentShape !== shape){
     stereoCurrentShape = shape;
     stereoCurrentMask  = buildStereoMask(SW, SH, shape);
   }
-
   const cols = Math.ceil(SW / ds);
   const rows = Math.ceil(SH / ds);
   const d    = Math.max(1, Math.round(disparityPx / ds));
-  stereoCurrentCols = cols;
-  stereoCurrentRows = rows;
-  stereoCurrentDs   = ds;
-
+  stereoCurrentCols = cols; stereoCurrentRows = rows; stereoCurrentDs = ds;
   const base = new Uint8Array(cols * rows);
   for(let i = 0; i < base.length; i++) base[i] = Math.random() < 0.5 ? 1 : 0;
   const pool = new Uint8Array(cols * rows);
   for(let i = 0; i < pool.length; i++) pool[i] = Math.random() < 0.5 ? 1 : 0;
-
   const right = base.slice();
   for(let row = 0; row < rows; row++){
     for(let col = 0; col < cols; col++){
@@ -3298,21 +3310,18 @@ function generateRDS(){
   }
   stereoCurrentLeftGrid  = base;
   stereoCurrentRightGrid = right;
-
   const warning = disparityPx < ds ? ' ⚠ <1 célula — use ponto menor' : '';
   stereoDisparityLbl.innerHTML = `${level.label} · ${disparityPx.toFixed(1)} px disparidade${warning}`;
   document.getElementById('stereo-fs-label').textContent = `${level.label} · ${disparityPx.toFixed(1)}px`;
 }
 
 function gridToCanvas(grid, cols, rows, ds){
-  const c   = document.createElement('canvas');
-  c.width   = SW; c.height = SH;
+  const c = document.createElement('canvas');
+  c.width = SW; c.height = SH;
   const ctx = c.getContext('2d');
   const img = ctx.createImageData(SW, SH);
   const dat = img.data;
-  for(let i = 0; i < dat.length; i += 4){
-    dat[i] = dat[i+1] = dat[i+2] = 255; dat[i+3] = 255;
-  }
+  for(let i = 0; i < dat.length; i += 4){ dat[i]=dat[i+1]=dat[i+2]=255; dat[i+3]=255; }
   for(let row = 0; row < rows; row++){
     for(let col = 0; col < cols; col++){
       if(!grid[row*cols + col]) continue;
@@ -3321,8 +3330,7 @@ function gridToCanvas(grid, cols, rows, ds){
       for(let y = y0; y < y1; y++){
         const base2 = y*SW;
         for(let x = x0; x < x1; x++){
-          const k = (base2+x)*4;
-          dat[k] = dat[k+1] = dat[k+2] = 0;
+          const k = (base2+x)*4; dat[k]=dat[k+1]=dat[k+2]=0;
         }
       }
     }
@@ -3331,8 +3339,7 @@ function gridToCanvas(grid, cols, rows, ds){
   return c;
 }
 
-function renderStereo(){
-  if(!stereoCurrentLeftGrid) generateRDS();
+function renderStereoRDS(){
   const mode = stereoModeSel.value;
   const ds   = stereoCurrentDs;
   const leftC  = gridToCanvas(stereoCurrentLeftGrid,  stereoCurrentCols, stereoCurrentRows, ds);
@@ -3343,7 +3350,7 @@ function renderStereo(){
   if(mode === 'flat'){
     sctx.drawImage(leftC, 0, 0);
   } else if(mode === 'sbs'){
-    sctx.drawImage(rightC, 0, 0, SW, SH, 0,                       0,                   SW/2, SH);
+    sctx.drawImage(rightC, 0, 0, SW, SH, 0, 0, SW/2, SH);
     sctx.drawImage(leftC,  0, 0, SW, SH, SW/2 + sbsHorizontalOffset, sbsVerticalOffset, SW/2, SH);
   } else {
     const ld  = leftC.getContext('2d').getImageData(0, 0, SW, SH);
@@ -3358,6 +3365,194 @@ function renderStereo(){
   }
 }
 
+// ---- Disparidade Lateral: funções de desenho de objetos ----
+
+function drawLatBall(ctx, cx, cy, r){
+  const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.35, r*0.05, cx, cy, r);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(0.25,'#ff7043'); g.addColorStop(1,'#bf360c');
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx-r*0.28, cy-r*0.30, r*0.20, r*0.14, -0.5, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fill();
+}
+
+function drawLatStar(ctx, cx, cy, r){
+  const n = 5;
+  ctx.beginPath();
+  for(let i = 0; i < n*2; i++){
+    const a = (Math.PI/n)*i - Math.PI/2;
+    const rad = i%2===0 ? r : r*0.42;
+    i===0 ? ctx.moveTo(cx+Math.cos(a)*rad, cy+Math.sin(a)*rad)
+           : ctx.lineTo(cx+Math.cos(a)*rad, cy+Math.sin(a)*rad);
+  }
+  ctx.closePath();
+  const g = ctx.createRadialGradient(cx, cy-r*0.25, r*0.05, cx, cy, r);
+  g.addColorStop(0,'#fff9c4'); g.addColorStop(0.5,'#fdd835'); g.addColorStop(1,'#f57f17');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = '#e65100'; ctx.lineWidth = r*0.05; ctx.stroke();
+}
+
+function drawLatBear(ctx, cx, cy, r){
+  const earR = r*0.36, eox = r*0.72, eoy = r*0.74;
+  [[cx-eox,cy-eoy],[cx+eox,cy-eoy]].forEach(([ex,ey])=>{
+    ctx.beginPath(); ctx.arc(ex, ey, earR, 0, Math.PI*2);
+    ctx.fillStyle = '#a0622a'; ctx.fill();
+    ctx.beginPath(); ctx.arc(ex, ey, earR*0.58, 0, Math.PI*2);
+    ctx.fillStyle = '#f4a0a0'; ctx.fill();
+  });
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = '#c8913a'; ctx.fill();
+  [[cx-r*0.32,cy-r*0.18],[cx+r*0.32,cy-r*0.18]].forEach(([ex,ey])=>{
+    ctx.beginPath(); ctx.arc(ex, ey, r*0.10, 0, Math.PI*2);
+    ctx.fillStyle = '#1a0a00'; ctx.fill();
+    ctx.beginPath(); ctx.arc(ex+r*0.03, ey-r*0.03, r*0.04, 0, Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+  });
+  ctx.beginPath(); ctx.ellipse(cx, cy+r*0.22, r*0.38, r*0.26, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#e5a85a'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx, cy+r*0.14, r*0.13, r*0.09, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#1a0a00'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx-r*0.16, cy+r*0.30);
+  ctx.quadraticCurveTo(cx, cy+r*0.48, cx+r*0.16, cy+r*0.30);
+  ctx.strokeStyle = '#1a0a00'; ctx.lineWidth = r*0.06; ctx.lineJoin = 'round'; ctx.stroke();
+}
+
+function drawLatButterfly(ctx, cx, cy, r){
+  ctx.save();
+  [[-1],[1]].forEach(([sx])=>{
+    ctx.beginPath();
+    ctx.ellipse(cx+sx*r*0.60, cy-r*0.28, r*0.68, r*0.50, sx*0.22, 0, Math.PI*2);
+    ctx.fillStyle = '#ce93d8'; ctx.fill();
+    ctx.strokeStyle = '#7b1fa2'; ctx.lineWidth = r*0.04; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx+sx*r*0.55, cy-r*0.30, r*0.10, 0, Math.PI*2);
+    ctx.fillStyle = '#f8bbd0'; ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx+sx*r*0.45, cy+r*0.30, r*0.52, r*0.38, sx*0.30, 0, Math.PI*2);
+    ctx.fillStyle = '#ba68c8'; ctx.fill();
+    ctx.strokeStyle = '#7b1fa2'; ctx.stroke();
+  });
+  ctx.beginPath(); ctx.ellipse(cx, cy, r*0.09, r*0.60, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#4a148c'; ctx.fill();
+  ctx.strokeStyle = '#4a148c'; ctx.lineWidth = r*0.03;
+  [[-1],[1]].forEach(([sx])=>{
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-r*0.55);
+    ctx.quadraticCurveTo(cx+sx*r*0.28, cy-r*1.0, cx+sx*r*0.48, cy-r*1.12);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx+sx*r*0.48, cy-r*1.12, r*0.06, 0, Math.PI*2);
+    ctx.fillStyle = '#4a148c'; ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawLatHeart(ctx, cx, cy, r){
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy+r*0.82);
+  ctx.bezierCurveTo(cx-r*1.4, cy+r*0.25, cx-r*1.75, cy-r*0.78, cx, cy-r*0.18);
+  ctx.bezierCurveTo(cx+r*1.75, cy-r*0.78, cx+r*1.4, cy+r*0.25, cx, cy+r*0.82);
+  ctx.closePath();
+  const g = ctx.createRadialGradient(cx, cy-r*0.1, r*0.05, cx, cy, r*1.1);
+  g.addColorStop(0,'#ff8a80'); g.addColorStop(0.5,'#f44336'); g.addColorStop(1,'#b71c1c');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx-r*0.42, cy-r*0.22, r*0.22, r*0.13, -0.4, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fill();
+  ctx.restore();
+}
+
+function drawLatBalloon(ctx, cx, cy, r){
+  const g = ctx.createRadialGradient(cx-r*0.25, cy-r*0.35, r*0.05, cx, cy, r*0.9);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(0.28,'#42a5f5'); g.addColorStop(1,'#1565c0');
+  ctx.beginPath(); ctx.ellipse(cx, cy-r*0.08, r*0.75, r*0.92, 0, 0, Math.PI*2);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy+r*0.84, r*0.075, 0, Math.PI*2);
+  ctx.fillStyle = '#1565c0'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy+r*0.92);
+  ctx.quadraticCurveTo(cx+r*0.22, cy+r*1.35, cx+r*0.06, cy+r*1.68);
+  ctx.strokeStyle = '#777'; ctx.lineWidth = r*0.03; ctx.stroke();
+}
+
+function drawLatFish(ctx, cx, cy, r){
+  const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.2, r*0.05, cx, cy, r*0.9);
+  g.addColorStop(0,'#fff9c4'); g.addColorStop(0.3,'#ffb300'); g.addColorStop(1,'#e65100');
+  ctx.beginPath(); ctx.ellipse(cx-r*0.08, cy, r*0.75, r*0.50, 0, 0, Math.PI*2);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx+r*0.68, cy);
+  ctx.lineTo(cx+r*1.28, cy-r*0.50);
+  ctx.lineTo(cx+r*1.28, cy+r*0.50);
+  ctx.closePath(); ctx.fillStyle = '#e65100'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx-r*0.42, cy-r*0.12, r*0.11, 0, Math.PI*2);
+  ctx.fillStyle = '#111'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx-r*0.39, cy-r*0.15, r*0.04, 0, Math.PI*2);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx-r*0.05, cy-r*0.48);
+  ctx.quadraticCurveTo(cx+r*0.25, cy-r*0.72, cx+r*0.35, cy-r*0.48);
+  ctx.closePath(); ctx.fillStyle = '#e65100'; ctx.fill();
+}
+
+function drawLateralObject(ctx, W, H, objType, offsetX){
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  const cx = W/2 + offsetX, cy = H/2;
+  const r  = Math.min(W, H) * 0.18;
+  if(objType==='ball')      drawLatBall(ctx, cx, cy, r);
+  else if(objType==='star')      drawLatStar(ctx, cx, cy, r);
+  else if(objType==='bear')      drawLatBear(ctx, cx, cy, r);
+  else if(objType==='butterfly') drawLatButterfly(ctx, cx, cy, r);
+  else if(objType==='heart')     drawLatHeart(ctx, cx, cy, r);
+  else if(objType==='balloon')   drawLatBalloon(ctx, cx, cy, r);
+  else if(objType==='fish')      drawLatFish(ctx, cx, cy, r);
+}
+
+function renderLateralDisparity(){
+  const arcsec  = parseInt(stereoLevelSel.value);
+  const dispPx  = arcsecToPixelsStereo(arcsec);
+  const level   = STEREO_LEVELS.find(l => l.arcsec === arcsec) || STEREO_LEVELS[0];
+  const mode    = stereoModeSel.value;
+  const objType = stereoObjectSel.value;
+  stereoDisparityLbl.innerHTML = `${level.label} · ${dispPx.toFixed(1)} px disparidade`;
+  document.getElementById('stereo-fs-label').textContent = `${level.label} · ${dispPx.toFixed(1)}px`;
+  const half = dispPx / 2;
+  const rightC = document.createElement('canvas');
+  rightC.width = SW; rightC.height = SH;
+  drawLateralObject(rightC.getContext('2d'), SW, SH, objType, -half);
+  const leftC = document.createElement('canvas');
+  leftC.width = SW; leftC.height = SH;
+  drawLateralObject(leftC.getContext('2d'), SW, SH, objType, +half);
+  const wrap = document.getElementById('stereo-canvas-wrap');
+  wrap.classList.toggle('sbs-active', mode === 'sbs');
+  sctx.clearRect(0, 0, SW, SH);
+  if(mode === 'flat'){
+    drawLateralObject(sctx, SW, SH, objType, 0);
+  } else if(mode === 'sbs'){
+    sctx.drawImage(rightC, 0, 0, SW, SH, 0, 0, SW/2, SH);
+    sctx.drawImage(leftC,  0, 0, SW, SH, SW/2 + sbsHorizontalOffset, sbsVerticalOffset, SW/2, SH);
+  } else {
+    const rd  = rightC.getContext('2d').getImageData(0, 0, SW, SH);
+    const ld  = leftC.getContext('2d').getImageData(0, 0, SW, SH);
+    const out = sctx.createImageData(SW, SH);
+    for(let y = 0; y < SH; y++){
+      const src = (y%2===0) ? rd : ld;
+      const rs  = y*SW*4;
+      for(let x = 0; x < SW*4; x++) out.data[rs+x] = src.data[rs+x];
+    }
+    sctx.putImageData(out, 0, 0);
+  }
+}
+
+function renderStereo(){
+  if(stereoTypeSel.value === 'rds'){
+    if(!stereoCurrentLeftGrid) generateRDS();
+    renderStereoRDS();
+  } else {
+    renderLateralDisparity();
+  }
+}
+
 function stereoGoLevel(delta){
   const cur  = parseInt(stereoLevelSel.value);
   const idx  = STEREO_LEVELS.findIndex(l => l.arcsec === cur);
@@ -3365,7 +3560,6 @@ function stereoGoLevel(delta){
   if(next < 0 || next >= STEREO_LEVELS.length) return;
   stereoLevelSel.value = STEREO_LEVELS[next].arcsec;
   stereoCurrentLeftGrid = null;
-  generateRDS();
   renderStereo();
 }
 
@@ -3410,20 +3604,29 @@ function updateStereoResults(){
   document.getElementById('stereo-clear-btn').addEventListener('click', ()=>{ stereoResults=[]; updateStereoResults(); });
 }
 
-document.getElementById('stereo-regenerate').addEventListener('click', ()=>{ stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
+document.getElementById('stereo-regenerate').addEventListener('click', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
 document.getElementById('stereo-pass').addEventListener('click', ()=> recordStereoResult(true));
 document.getElementById('stereo-fail').addEventListener('click', ()=> recordStereoResult(false));
 document.getElementById('stereo-level-prev').addEventListener('click', ()=> stereoGoLevel(-1));
 document.getElementById('stereo-level-next').addEventListener('click', ()=> stereoGoLevel(+1));
-document.getElementById('stereo-fs-regenerate').addEventListener('click', ()=>{ stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
+document.getElementById('stereo-fs-regenerate').addEventListener('click', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
 document.getElementById('stereo-fs-pass').addEventListener('click', ()=> recordStereoResult(true));
 document.getElementById('stereo-fs-fail').addEventListener('click', ()=> recordStereoResult(false));
 document.getElementById('stereo-fs-prev').addEventListener('click', ()=> stereoGoLevel(-1));
 document.getElementById('stereo-fs-next').addEventListener('click', ()=> stereoGoLevel(+1));
+stereoTypeSel.addEventListener('change', ()=>{
+  const isRDS = stereoTypeSel.value === 'rds';
+  document.getElementById('stereo-shape-group').style.display  = isRDS ? '' : 'none';
+  document.getElementById('stereo-dot-group').style.display    = isRDS ? '' : 'none';
+  document.getElementById('stereo-object-group').style.display = isRDS ? 'none' : '';
+  stereoCurrentLeftGrid = null;
+  renderStereo();
+});
 stereoModeSel.addEventListener('change', renderStereo);
-stereoShapeSel.addEventListener('change', ()=>{ stereoCurrentShape=null; stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
-stereoLevelSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
-stereoDotSizeSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; generateRDS(); renderStereo(); });
+stereoShapeSel.addEventListener('change', ()=>{ stereoCurrentShape=null; stereoCurrentLeftGrid=null; renderStereo(); });
+stereoObjectSel.addEventListener('change', renderStereo);
+stereoLevelSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
+stereoDotSizeSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; renderStereo(); });
 document.getElementById('stereo-fullscreen').addEventListener('click', ()=>{
   enterFullscreen(document.getElementById('stereo-canvas-wrap'));
 });
@@ -3464,7 +3667,7 @@ document.getElementById('vect-fs-exit').addEventListener('click', exitFullscreen
 document.addEventListener('fullscreenchange', ()=>{
   renderEtdrs();
   renderVectogram();
-  if(stereoCurrentLeftGrid) renderStereo();
+  if(stereoCurrentLeftGrid || stereoTypeSel.value === 'lateral') renderStereo();
 });
 
 // --- Esconder/mostrar barra de controles em tela cheia ---
