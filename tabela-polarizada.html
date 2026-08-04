@@ -562,6 +562,19 @@
       </div>
     </div>
 
+    <div class="controls" style="gap:10px; align-items:center; flex-wrap:wrap; background:#1c1c20; border:1px solid #2a2a30; border-radius:6px; padding:10px 14px; margin-top:4px;">
+      <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.04em; white-space:nowrap;">CALIBRAÇÃO TV (ESTEREOPSIA)</span>
+      <label style="font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:4px;">Diagonal (pol.)
+        <input type="number" id="stereo-cal-diag" value="42" min="10" max="120" step="0.5" style="width:75px; background:#1c1c20; border:1px solid #2a2a30; color:var(--text); border-radius:5px; padding:6px 8px; font-size:13px;">
+      </label>
+      <label style="font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:4px;">Resolução (px largura)
+        <input type="number" id="stereo-cal-res" value="1920" min="640" max="7680" step="1" style="width:88px; background:#1c1c20; border:1px solid #2a2a30; color:var(--text); border-radius:5px; padding:6px 8px; font-size:13px;">
+      </label>
+      <label style="font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:4px;">Distância (m)
+        <input type="number" id="stereo-cal-dist" value="3" min="0.5" max="10" step="0.1" style="width:65px; background:#1c1c20; border:1px solid #2a2a30; color:var(--text); border-radius:5px; padding:6px 8px; font-size:13px;">
+      </label>
+    </div>
+
     <div id="stereo-results" style="margin-top:14px;"></div>
 
     <div class="note">
@@ -571,7 +584,7 @@
       <br><br>
       <strong>Procedimento:</strong> coloque os óculos polarizados no paciente e peça que descreva o que vê. Comece em 800″ e avance para níveis menores. O <em>limiar</em> é o menor nível percebido corretamente. Valores normais: ≤ 40 arcsec.
       <br><br>
-      <strong>Nota técnica:</strong> a disparidade usa a calibração (diagonal, resolução, distância) da aba ETDRS. No RDS, use ponto fino (2px) para níveis ≤ 40″ em telas grandes ou distâncias maiores que 3 m.
+      <strong>Nota técnica:</strong> a disparidade usa a calibração própria da aba Estereopsia (diagonal, resolução, distância — painel acima). No RDS, use ponto fino (2px) para níveis ≤ 40″ em telas grandes ou distâncias maiores que 3 m.
     </div>
   </div>
 
@@ -646,6 +659,32 @@ let sbsHorizontalOffset = _savedCalibration.sbsH;
 calDiagInput.addEventListener('change', saveCalibration);
 calResInput.addEventListener('change', saveCalibration);
 calDistInput.addEventListener('change', saveCalibration);
+
+/* ================= CALIBRAÇÃO STEREO INDEPENDENTE ================= */
+const STEREO_CAL_KEY = 'tabelaPolarizada_stereoCal';
+function saveStereoCal(){
+  try{
+    localStorage.setItem(STEREO_CAL_KEY, JSON.stringify({
+      diag: parseFloat(document.getElementById('stereo-cal-diag').value) || 42,
+      res:  parseFloat(document.getElementById('stereo-cal-res').value)  || 1920,
+      dist: parseFloat(document.getElementById('stereo-cal-dist').value) || 3
+    }));
+  } catch(e){}
+}
+function loadStereoCal(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STEREO_CAL_KEY));
+    if(s){
+      document.getElementById('stereo-cal-diag').value = s.diag || 42;
+      document.getElementById('stereo-cal-res').value  = s.res  || 1920;
+      document.getElementById('stereo-cal-dist').value = s.dist || 3;
+    }
+  } catch(e){}
+}
+document.getElementById('stereo-cal-diag').addEventListener('change', saveStereoCal);
+document.getElementById('stereo-cal-res').addEventListener('change',  saveStereoCal);
+document.getElementById('stereo-cal-dist').addEventListener('change', saveStereoCal);
+loadStereoCal();
 
 // Calcula altura da letra em px para uma dada notação Snellen (denominador em pés),
 // a partir da diagonal física da tela, resolução horizontal e distância de teste.
@@ -969,18 +1008,21 @@ function drawColoredLetter(ctx, letter, cx, cy, size, colorIdx){
 
 // logMAR-based decreasing sizes per row, feet notation (20/x), largest to smallest.
 // Tamanho real (px) é calculado dinamicamente via letterHeightPx() usando a calibração compartilhada.
+// count = número de optótipos por linha (padrão ETDRS: 2→3→4→5→5→…)
 const etdrsRows = [
-  {denom:200, label:"20/200"},
-  {denom:160, label:"20/160"},
-  {denom:125, label:"20/125"},
-  {denom:100, label:"20/100"},
-  {denom:80,  label:"20/80"},
-  {denom:63,  label:"20/63"},
-  {denom:50,  label:"20/50"},
-  {denom:40,  label:"20/40"},
-  {denom:32,  label:"20/32"},
-  {denom:25,  label:"20/25"},
-  {denom:20,  label:"20/20"}
+  {denom:800, label:"20/800", count:2},
+  {denom:400, label:"20/400", count:3},
+  {denom:200, label:"20/200", count:4},
+  {denom:160, label:"20/160", count:5},
+  {denom:125, label:"20/125", count:5},
+  {denom:100, label:"20/100", count:5},
+  {denom:80,  label:"20/80",  count:5},
+  {denom:63,  label:"20/63",  count:5},
+  {denom:50,  label:"20/50",  count:5},
+  {denom:40,  label:"20/40",  count:5},
+  {denom:32,  label:"20/32",  count:5},
+  {denom:25,  label:"20/25",  count:5},
+  {denom:20,  label:"20/20",  count:5}
 ];
 
 // No modo vertical, cada bloco mostra 3 linhas de tamanhos diferentes (colunas esquerda/âncora/direita).
@@ -1052,17 +1094,44 @@ function generateEtdrsLetters(){
       bottom: randomLetters(5)
     }));
   } else {
-    // Vertical: cada row tem 5 letras
-    etdrsLetters = etdrsRows.map(()=> randomLetters(5));
+    // Vertical: cada row tem count letras (2→3→4→5 conforme padrão ETDRS)
+    etdrsLetters = etdrsRows.map(row => randomLetters(row.count || 5));
     // Vertical single: gera 3 conjuntos extras com letras diferentes para as 3 fileiras
     if(isSingleLayout()){
-      etdrsRows.forEach((_, rowIdx)=>{
+      etdrsRows.forEach((row, rowIdx)=>{
         for(let fi=0;fi<3;fi++){
-          etdrsLetters[`single_${rowIdx}_${fi}`] = randomLetters(5);
+          etdrsLetters[`single_${rowIdx}_${fi}`] = randomLetters(row.count || 5);
         }
       });
     }
   }
+}
+
+// Retorna posições X e tipo de olho para cada letra, conforme número de optótipos por linha.
+// eyeType: 'od' = olho direito, 'oe' = olho esquerdo, 'both' = binocular (âncora central).
+function getLetterPositions(count, centerX, gap){
+  if(count === 2) return [
+    {x: centerX - gap,   eyeType: 'od'},
+    {x: centerX + gap,   eyeType: 'oe'},
+  ];
+  if(count === 3) return [
+    {x: centerX - 2*gap, eyeType: 'od'},
+    {x: centerX,         eyeType: 'both'},
+    {x: centerX + 2*gap, eyeType: 'oe'},
+  ];
+  if(count === 4) return [
+    {x: centerX - 2*gap, eyeType: 'od'},
+    {x: centerX - gap,   eyeType: 'od'},
+    {x: centerX + gap,   eyeType: 'oe'},
+    {x: centerX + 2*gap, eyeType: 'oe'},
+  ];
+  return [ // 5 (padrão)
+    {x: centerX - 2*gap, eyeType: 'od'},
+    {x: centerX - gap,   eyeType: 'od'},
+    {x: centerX,         eyeType: 'both'},
+    {x: centerX + gap,   eyeType: 'oe'},
+    {x: centerX + 2*gap, eyeType: 'oe'},
+  ];
 }
 
 // colorIdx é a posição da coluna/elemento; rowIdx é a linha — usados para gerar cor única por posição
@@ -1196,13 +1265,8 @@ function buildEtdrsEyeCanvas(eye, bgColor){
 
     // Column spacing scales with this row's letter size so large rows don't crowd
     const gap = size * 1.35;
-    const colX = [
-      centerX - gap*2,
-      centerX - gap,
-      centerX,
-      centerX + gap,
-      centerX + gap*2
-    ];
+    const count = row.count || 5;
+    const positions = getLetterPositions(count, centerX, gap);
 
     // label (feet notation) — tamanho proporcional à letra da linha
     ctx.save();
@@ -1213,23 +1277,23 @@ function buildEtdrsEyeCanvas(eye, bgColor){
     ctx.fillText(row.label, 10, cy+6);
     ctx.restore();
 
-    // positions: 0,1 = left side of screen -> right eye (convenção Thomson, cruzada) ; 2 = center/binocular ; 3,4 = right side of screen -> left eye
-    letters.forEach((letter, cIdx)=>{
-      let visible = true;
+    letters.forEach((letter, lIdx)=>{
+      const pos = positions[lIdx];
+      if(!pos) return;
+      let visible = false;
       let color = '#000';
-      if(cIdx===0 || cIdx===1){
-        visible = (eye==='right' || eye==='flat');
-        color = eye==='flat' ? '#000' : '#111';
-      } else if(cIdx===3 || cIdx===4){
-        visible = (eye==='left' || eye==='flat');
-        color = eye==='flat' ? '#000' : '#111';
-      } else {
-        visible = true; // center always drawn in both eyes -> binocular
+      if(pos.eyeType === 'od'){
+        visible = (eye === 'right' || eye === 'flat');
+        color = eye === 'flat' ? '#000' : '#111';
+      } else if(pos.eyeType === 'oe'){
+        visible = (eye === 'left' || eye === 'flat');
+        color = eye === 'flat' ? '#000' : '#111';
+      } else { // 'both' — âncora central binocular
+        visible = true;
         color = '#000';
       }
       if(visible){
-        // Usa rIdx*100+cIdx como colorIdx único por célula — garante cor diferente em cada posição
-        drawSloanLetter(ctx, letter, colX[cIdx], cy, size, color, cIdx, rIdx * 10 + localIdx);
+        drawSloanLetter(ctx, letter, pos.x, cy, size, color, lIdx, rIdx * 10 + localIdx);
       }
     });
   });
@@ -1347,7 +1411,7 @@ function renderEtdrs(){
         const letters = etdrsLetters[rIdx];
         const size = letterHeightPx(row.denom);
         const gap = size * 1.35;
-        const colX = [centerX-gap*2, centerX-gap, centerX, centerX+gap, centerX+gap*2];
+        const positions = getLetterPositions(row.count || 5, centerX, gap);
 
         etctx.save();
         etctx.fillStyle = '#000';
@@ -1356,8 +1420,8 @@ function renderEtdrs(){
         etctx.fillText(row.label, 10, cy+6);
         etctx.restore();
 
-        letters.forEach((letter, cIdx)=>{
-          drawSloanLetter(etctx, letter, colX[cIdx], cy, size, '#000');
+        letters.forEach((letter, lIdx)=>{
+          if(positions[lIdx]) drawSloanLetter(etctx, letter, positions[lIdx].x, cy, size, '#000');
         });
       });
     }
@@ -2645,9 +2709,9 @@ const LAT_POSITIONS = [
 ];
 
 function arcsecToPixelsStereo(arcsec){
-  const diagIn  = parseFloat(calDiagInput.value) || 42;
-  const resW    = parseFloat(calResInput.value)  || 1920;
-  const distM   = parseFloat(calDistInput.value) || 3;
+  const diagIn  = parseFloat(document.getElementById('stereo-cal-diag').value) || 42;
+  const resW    = parseFloat(document.getElementById('stereo-cal-res').value)  || 1920;
+  const distM   = parseFloat(document.getElementById('stereo-cal-dist').value) || 3;
   const diagMm  = diagIn * 25.4;
   const ratioD  = Math.sqrt(16*16 + 9*9);
   const widthMm = diagMm * (16 / ratioD);
