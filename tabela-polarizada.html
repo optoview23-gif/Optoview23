@@ -135,7 +135,10 @@
     width:100vw; height:100vh; border-radius:0;
   }
   :fullscreen canvas{
-    max-width:96vw; max-height:88vh; width:auto; height:auto;
+    /* Preserva 16:9 em qualquer orientação do dispositivo (landscape ou portrait) */
+    max-width: min(100vw, calc(100vh * 16 / 9));
+    max-height: min(100vh, calc(100vw * 9 / 16));
+    width: auto; height: auto;
   }
   /* Modo Side by Side precisa ocupar a tela INTEIRA sem margens em fullscreen,
      senão a TV expande cada metade com base em bordas erradas e a imagem sai descentralizada. */
@@ -2635,10 +2638,10 @@ let stereoResults          = [];
 let stereoLateralTarget    = 0; // índice 0-3 do objeto com disparidade
 
 const LAT_POSITIONS = [
-  {x: 0.50, y: 0.18, name: 'superior (1)'},
-  {x: 0.18, y: 0.50, name: 'esquerdo (2)'},
-  {x: 0.82, y: 0.50, name: 'direito (3)'},
-  {x: 0.50, y: 0.82, name: 'inferior (4)'},
+  {x: 0.50, y: 0.22, name: 'superior (1)'},
+  {x: 0.25, y: 0.50, name: 'esquerdo (2)'},
+  {x: 0.75, y: 0.50, name: 'direito (3)'},
+  {x: 0.50, y: 0.78, name: 'inferior (4)'},
 ];
 
 function arcsecToPixelsStereo(arcsec){
@@ -2996,13 +2999,13 @@ function makeLateralEyeCanvas(objType, targetIdx, dispOffset, style){
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, SW, SH);
-  const r = Math.min(SW, SH) * 0.13;
+  const r = Math.min(SW, SH) * 0.07;
   ctx.font = `bold ${Math.round(r * 0.52)}px Arial`;
   ctx.fillStyle = '#bbbbbb';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   LAT_POSITIONS.forEach((pos, i) => {
-    ctx.fillText(String(i + 1), SW * pos.x, SH * pos.y - r * 1.55);
+    ctx.fillText(String(i + 1), SW * pos.x, SH * pos.y - r * 1.65);
   });
   LAT_POSITIONS.forEach((pos, i) => {
     const cx = SW * pos.x + (i === targetIdx ? dispOffset : 0);
@@ -3039,7 +3042,7 @@ function renderLateralDisparity(){
     // Referência: mostra os 4 objetos sem disparidade
     sctx.fillStyle = '#ffffff';
     sctx.fillRect(0, 0, SW, SH);
-    const r = Math.min(SW, SH) * 0.13;
+    const r = Math.min(SW, SH) * 0.07;
     LAT_POSITIONS.forEach((pos, i) => {
       drawLatObjectAt(sctx, objType, SW * pos.x, SH * pos.y, r, style);
     });
@@ -3057,6 +3060,13 @@ function renderLateralDisparity(){
     }
     sctx.putImageData(out, 0, 0);
   }
+  // Label do nível visível no canto do canvas (clínico vê no monitor)
+  const labelFontSize = Math.round(Math.min(SW, SH) * 0.032);
+  sctx.font = `bold ${labelFontSize}px Arial`;
+  sctx.fillStyle = 'rgba(80,80,80,0.55)';
+  sctx.textAlign = 'left';
+  sctx.textBaseline = 'top';
+  sctx.fillText(`${level.label}  ·  ${dispPx.toFixed(1)} px`, 24, 16);
 }
 
 function renderStereo(){
@@ -3184,30 +3194,52 @@ stereoDotSizeSel.addEventListener('change', ()=>{ stereoCurrentLeftGrid=null; re
 if(stereoStyleSel) stereoStyleSel.addEventListener('change', ()=>{ renderStereo(); });
 
 // Tap-to-record: clinician taps the position the patient identified
+let latTapLocked = false;
 stereoCanvas.addEventListener('click', function(e){
   if(stereoTypeSel.value !== 'lateral') return;
+  if(latTapLocked) return;
   const rect = stereoCanvas.getBoundingClientRect();
   const scaleX = SW / rect.width;
   const scaleY = SH / rect.height;
-  const cx = (e.clientX - rect.left) * scaleX;
-  const cy = (e.clientY - rect.top)  * scaleY;
+  const tapX = (e.clientX - rect.left) * scaleX;
+  const tapY = (e.clientY - rect.top)  * scaleY;
   let minDist = Infinity, nearest = 0;
   LAT_POSITIONS.forEach((pos, i)=>{
-    const dx = cx - SW * pos.x, dy = cy - SH * pos.y;
+    const dx = tapX - SW * pos.x, dy = tapY - SH * pos.y;
     const d = Math.sqrt(dx*dx + dy*dy);
     if(d < minDist){ minDist = d; nearest = i; }
   });
-  const r = Math.min(SW, SH) * 0.13;
-  if(minDist > r * 2.5) return;
+  const r = Math.min(SW, SH) * 0.07;
+  if(minDist > r * 3.5) return;
+  latTapLocked = true;
   const correct = (nearest === stereoLateralTarget);
-  recordStereoResult(correct);
-  // Brief visual feedback on the target label
+  const nx = SW * LAT_POSITIONS[nearest].x;
+  const ny = SH * LAT_POSITIONS[nearest].y;
+  // Feedback visivel no canvas (TV ve tambem)
+  sctx.save();
+  sctx.beginPath();
+  sctx.arc(nx, ny, r * 1.5, 0, Math.PI * 2);
+  sctx.strokeStyle = correct ? '#43a047' : '#e53935';
+  sctx.lineWidth = r * 0.20;
+  sctx.stroke();
+  sctx.font = `bold ${Math.round(r * 2.2)}px Arial`;
+  sctx.textAlign = 'center';
+  sctx.textBaseline = 'middle';
+  sctx.fillStyle = correct ? '#43a047' : '#e53935';
+  sctx.fillText(correct ? '✓' : '✗', nx, ny - r * 2.2);
+  sctx.restore();
+  // Atualiza label nos controles
   const tgt = document.getElementById('stereo-target-pos');
   if(tgt){
     tgt.textContent = correct ? '✓ Correto!' : '✗ Errado';
     tgt.style.color = correct ? '#43a047' : '#e53935';
-    setTimeout(()=>{ tgt.style.color = ''; renderStereo(); }, 1200);
   }
+  // Registra depois de 900ms (clinico ve o feedback primeiro)
+  setTimeout(()=>{
+    if(tgt){ tgt.textContent = ''; tgt.style.color = ''; }
+    latTapLocked = false;
+    recordStereoResult(correct);
+  }, 900);
 });
 
 document.getElementById('stereo-fullscreen').addEventListener('click', ()=>{
