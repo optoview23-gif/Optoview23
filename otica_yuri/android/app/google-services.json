@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "763653043562",
+    "project_id": "otica-yuri",
+    "storage_bucket": "otica-yuri.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:763653043562:android:8a74e83d595684c952a113",
+        "android_client_info": {
+          "package_name": "com.oticayuri.otica_yuri"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "763653043562-of5uhorifr0h64rj641rjt3d68amoa82.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6383nLU2-gxS3Oial_rfW1i7E3hNsKBk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "763653043562-of5uhorifr0h64rj641rjt3d68amoa82.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
